@@ -13,41 +13,39 @@ import java.net.InetAddress;
     private int tracker;
 }*/
 
-public class OverlayNodeSendsRegistration {
+public class OverlayNodeSendsRegistration implements Event{
     private byte msgType = Protocol.OVERLAY_NODE_SENDS_REGISTRATION;
     private byte IPLength;
-    private String IPAddress = null;        //InetAddress.getAddress();
+    private byte[] IPAddress = null;
     private int portNum;
 
-
+    public byte getType(){return msgType;}
 
 
     public byte[] getBytes() throws IOException {
-        byte[] marshalledBytes = null;
+        byte[] marshaledBytes = null;
         ByteArrayOutputStream baOutputStream = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
-        dout.writeInt(msgType);
+        dout.writeByte(msgType);
+        dout.writeByte(IPLength);
+        IPLength = (byte)IPAddress.length;
         dout.writeInt(IPLength);
-        byte[] IPAddressBytes = IPAddress.getBytes();
-        IPLength = (byte)IPAddressBytes.length;
-        dout.writeInt(IPLength);
-        dout.write(IPAddressBytes);
+        dout.write(IPAddress);
         dout.writeInt(portNum);
         dout.flush();
-        marshalledBytes = baOutputStream.toByteArray();
+        marshaledBytes = baOutputStream.toByteArray();
         baOutputStream.close();
         dout.close();
-        return marshalledBytes;
+        return marshaledBytes;
     }
 
-    public OverlayNodeSendsRegistration(byte[] marshalledBytes) throws IOException {
-        ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshalledBytes);
+    public OverlayNodeSendsRegistration(byte[] marshaledBytes) throws IOException {
+        ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshaledBytes);
         DataInputStream din = new DataInputStream (new BufferedInputStream(baInputStream));
         msgType = din.readByte();
         IPLength = din.readByte();
         byte[] identifierBytes = new byte[IPLength];
         din.readFully(identifierBytes);
-        IPAddress = new String(identifierBytes);
         portNum = din.readInt();
         baInputStream.close();
         din.close();

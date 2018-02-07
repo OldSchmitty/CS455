@@ -9,15 +9,18 @@ public class TCPServerThread extends Thread{
     //private Queue<byte[]> queue;
     private TCPConnectionsCache cache;
     private Node node;
-    public TCPServerThread(Node node){
-        //queue = new Queue();
+    private ServerSocket serverSocket;
+    public TCPServerThread(Node node, ServerSocket serverSocket){
+        //queue = new Queue()
+        this.serverSocket = serverSocket;
         cache = new TCPConnectionsCache();
         this.node = node;
-        this.run();
+        this.start();
     }
 
     public void run(){
-        try(ServerSocket serverSocket = new ServerSocket(0)){
+        try{
+            serverSocket = new ServerSocket(0);
             while(true) {
                 Socket socket = serverSocket.accept();
                 cache.addConnection(socket, node);

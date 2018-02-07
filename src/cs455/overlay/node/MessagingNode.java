@@ -15,16 +15,16 @@ public class MessagingNode extends Thread implements Node{
     private int nodeNum;
     private String host;
     private int port;
+    protected ServerSocket serverSocket;
 
 
     public MessagingNode(String host, int port){
         this.host = host;
         this.port = port;
-        register();
-        TCPConnectionsCache cache = new TCPConnectionsCache();
+        TCPServerThread server = new TCPServerThread(this, serverSocket);
     }
 
-    public void register(){
+    public void register(String ipAddr){
 
     }
 

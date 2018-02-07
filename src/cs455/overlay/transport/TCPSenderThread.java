@@ -12,8 +12,8 @@ public class TCPSenderThread extends Thread
 {
     private Socket socket;
     private DataOutputStream dout;
-    private ArrayList<Event> queue;
-    private Boolean open;
+    private ArrayList<byte[]> queue;
+    private volatile boolean open;
 
     public TCPSenderThread(Socket socket) throws IOException {
         this.socket = socket;
@@ -21,11 +21,17 @@ public class TCPSenderThread extends Thread
         open = true;
     }
 
-    public void close(){
+    public synchronized void close(){
         open = false;
+        notify();
     }
 
-    public void sendData(byte[] dataToSend) throws IOException
+    public synchronized void addToQueue(byte[] data){
+        queue.add(data);
+        notify();
+    }
+
+    public synchronized void sendData(byte[] dataToSend) throws IOException
     {
         int dataLength = dataToSend.length;
         dout.writeInt(dataLength);
@@ -34,18 +40,26 @@ public class TCPSenderThread extends Thread
     }
 
     public synchronized void checkQueue(){
-        if (queue.size() > 0){
+        while(queue.size() < 1 && open) {
             try {
-                sendData(queue.get(0).getBytes());
-            }catch(java.io.IOException e){
+                wait();
+            } catch (java.lang.InterruptedException e) {
                 System.out.println(e);
             }
+            while (queue.size() > 0) {
+                try {
+                    sendData(queue.get(0));
+                    queue.remove(0);
+                }catch (java.io.IOException e){
+                    System.out.println(e);
+                }
+            }
         }
+
     }
+
     @Override
     public void run() {
-        while(open){
-            checkQueue();
-        }
+        checkQueue();
     }
 }
