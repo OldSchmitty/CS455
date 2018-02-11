@@ -4,6 +4,7 @@ import cs455.overlay.transport.TCPConnection;
 import cs455.overlay.wireformats.Event;
 
 import java.net.InetAddress;
+import java.net.Socket;
 import java.util.TreeMap;
 
 public class RoutingTable {
@@ -33,7 +34,7 @@ public class RoutingTable {
         }
     }
 
-    public void sendMsg(Event event, int id){
+    public synchronized void sendMsg(Event event, int id){
         table.get(id).sendMsg(event);
     }
 
@@ -41,6 +42,11 @@ public class RoutingTable {
         for (RoutingEntry r : table.values()){
             r.close();
         }
+    }
+
+    public void addEntry(int id, Socket socket){
+        RoutingEntry newEntry = new RoutingEntry(id, socket, node);
+        table.put(id,newEntry);
     }
 
 

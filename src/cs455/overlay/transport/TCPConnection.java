@@ -7,14 +7,16 @@ import cs455.overlay.wireformats.Event;
 public class TCPConnection {
     private TCPSenderThread sender;
     private TCPReceiverThread receiver;
+    private Socket socket;
     public TCPConnection(Socket socket, Node node) {
         try {
-            sender = new TCPSenderThread(socket);
+            this.socket = socket;
+            sender = new TCPSenderThread(this.socket);
         }catch (java.io.IOException e){
             System.out.println(e);
         }
         try {
-            receiver = new TCPReceiverThread(socket, node);
+            receiver = new TCPReceiverThread(this.socket, node);
         }catch (java.io.IOException e){
             System.out.println(e);
         }
@@ -23,9 +25,17 @@ public class TCPConnection {
         receiver.start();
     }
 
+    public Socket getSocket() {
+        return socket;
+    }
+
     public void close(){
         sender.close();
-        receiver.close();
+        try {
+            socket.close();
+        }catch(java.io.IOException e){
+            System.out.println(e);
+        }
     }
 
     public void sendMessage(Event event){

@@ -58,10 +58,11 @@ public class Registry implements Node{
         }
         try{
             InetAddress addr = InetAddress.getByAddress(msg.getIPAddress());
-            server.addRoute(id,msg.getPortNum(),addr);
+            Socket msgNodeSocket = server.getCacheSocket(addr,msg.getPortNum());
+            server.addRoute(id,msgNodeSocket);
         }catch(java.io.IOException e){
             System.out.println(e);
-            error = e.toString();
+            System.exit(1);
         }
         RegistryReportsRegistrationStatus reportMsg = new RegistryReportsRegistrationStatus(
                 id,server.table.getNodeNum(),error);
@@ -73,11 +74,9 @@ public class Registry implements Node{
         try {
             switch (type) {
                 case Protocol.OVERLAY_NODE_SENDS_REGISTRATION:
-
                     OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(event.getBytes());
                     registerNode(msg);
                     break;
-
             }
         }catch(java.io.IOException e){
             System.out.println(e);

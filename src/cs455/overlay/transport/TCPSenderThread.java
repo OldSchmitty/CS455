@@ -47,7 +47,7 @@ public class TCPSenderThread extends Thread
             } catch (java.lang.InterruptedException e) {
                 System.out.println(e);
             }
-            while (queue.size() > 0) {
+            while (queue.size() > 0 && socket != null) {
                 try {
                     sendData(queue.get(0));
                     queue.remove(0);
@@ -56,7 +56,6 @@ public class TCPSenderThread extends Thread
                 }
             }
         }
-
     }
 
     @Override

@@ -18,6 +18,11 @@ public class RoutingEntry {
         conn = new TCPConnection(socket, this.node);
     }
 
+    RoutingEntry(int id, Socket socket, Node node){
+        this.node = node;
+        conn = new TCPConnection(socket, this.node);
+    }
+
     public void sendMsg(Event event){
         conn.sendMessage(event);
     }

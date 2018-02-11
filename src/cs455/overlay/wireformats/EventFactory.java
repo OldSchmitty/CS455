@@ -9,7 +9,7 @@ public class EventFactory {
     public static void parse(byte[] data, Node node) throws java.io.IOException{
         ByteArrayInputStream baInputStream = new ByteArrayInputStream(data.clone());
         DataInputStream din = new DataInputStream (new BufferedInputStream(baInputStream));
-        int msgType = din.readInt();
+        int msgType = din.readByte();
         Event event = createEvent(msgType, data);
         node.onEvent(event);
     }

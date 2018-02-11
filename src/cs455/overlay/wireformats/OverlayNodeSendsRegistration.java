@@ -29,8 +29,7 @@ public class OverlayNodeSendsRegistration implements Event{
         dout.writeByte(msgType);
         dout.writeByte(IPLength);
         IPLength = (byte)IPAddress.length;
-        dout.writeInt(IPLength);
-        dout.write(IPAddress);
+        dout.write(IPAddress,0,IPLength);
         dout.writeInt(portNum);
         dout.flush();
         marshaledBytes = baOutputStream.toByteArray();

@@ -1,4 +1,5 @@
 package cs455.overlay.transport;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -14,22 +15,33 @@ public class TCPConnectionsCache {
         this.node = node;
     }
 
-    public void addConn(Socket newSock, int port){
-        TCPConnection newConn = new TCPConnection(newSock, node);
-        connections.add(newConn);
-    }
-
-    public void close(){
+    public synchronized void close(){
         for (TCPConnection conn : connections){
             conn.close();
         }
     }
 
-    public TCPConnection getConnection(int id){
+
+    public synchronized TCPConnection getConnection(int id){
         return connections.get(id);
     }
 
-    public void addConnection(Socket socket, Node node){
+    public synchronized Socket getSocket(InetAddress address, int port){
+        Socket rSocket;
+
+        for(TCPConnection conn : connections){
+            rSocket = conn.getSocket();
+            if(rSocket.getInetAddress().equals(address) && rSocket.getPort() == port){
+                return rSocket;
+            }
+        }
+        System.out.println("Failed to find the socket for "+address+" at port "+port);
+        return null;
+    }
+
+    public synchronized int addConnection(Socket socket, Node node){
         TCPConnection conn = new TCPConnection(socket, node);
+        connections.add(conn);
+        return connections.size()-1;
     }
 }

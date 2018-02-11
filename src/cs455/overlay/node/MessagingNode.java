@@ -16,7 +16,7 @@ import java.net.InetAddress;
 public class MessagingNode implements Node{
 
     private int nodeNum;
-    private String host;
+    private InetAddress host;
     private int port;
     private int idNum;
     protected ServerSocket serverSocket;
@@ -31,7 +31,12 @@ public class MessagingNode implements Node{
     }
 
     public MessagingNode(String host, int port){
-        this.host = host;
+        try {
+            this.host = InetAddress.getByName(host);
+        }catch(java.net.UnknownHostException e) {
+            System.out.println(e);
+            System.exit(1);
+        }
         this.port = port;
         try {
             this.serverSocket = new ServerSocket(0);
@@ -49,7 +54,7 @@ public class MessagingNode implements Node{
         register();
     }
 
-    public void addRegistry(String host, int port){
+    public void addRegistry(InetAddress host, int port){
         try {
             regSocket = new Socket(host, port);
         }catch(java.io.IOException e){
@@ -58,10 +63,16 @@ public class MessagingNode implements Node{
     }
 
     public void register(){
-        OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(this.IPAddress, this.regSocket.getPort());
+        OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(
+                regConn.getSocket().getLocalAddress().getAddress(), this.regSocket.getLocalPort());
         if (msg.getType() != -1){
             regConn.sendMessage(msg);
         }
+    }
+
+    public void deregister(){
+        server.close();
+        regConn.close();
     }
 
     public void onEvent(Event event){
@@ -113,6 +124,7 @@ public class MessagingNode implements Node{
                         inputString = scanner.next();
                     }
                 }
+                node.deregister();
 
             }catch (NumberFormatException e){
                 System.out.println(e);
