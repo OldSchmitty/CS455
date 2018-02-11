@@ -13,7 +13,7 @@ import cs455.overlay.transport.TCPConnectionsCache;
 import java.net.InetAddress;
 
 
-public class MessagingNode extends Thread implements Node{
+public class MessagingNode implements Node{
 
     private int nodeNum;
     private String host;
@@ -33,9 +33,18 @@ public class MessagingNode extends Thread implements Node{
     public MessagingNode(String host, int port){
         this.host = host;
         this.port = port;
+        try {
+            this.serverSocket = new ServerSocket(0);
+        }catch(java.io.IOException e){
+            System.out.println(e);
+        }
         this.server = new TCPServerThread(this, serverSocket);
         addRegistry(this.host, this.port);
         this.IPAddress = server.getAddr();
+        if(regSocket == null){
+            System.out.println("Error: Could not connect to "+host+" at port number "+port);
+            System.exit(1);
+        }
         this.regConn = new TCPConnection(this.regSocket, this);
         register();
     }
@@ -43,7 +52,6 @@ public class MessagingNode extends Thread implements Node{
     public void addRegistry(String host, int port){
         try {
             regSocket = new Socket(host, port);
-
         }catch(java.io.IOException e){
             System.out.println(e);
         }
@@ -84,18 +92,6 @@ public class MessagingNode extends Thread implements Node{
 
     public int getNodeNum(){
         return this.nodeNum;
-    }
-
-    public void run(){
-        try(ServerSocket serverSocket = new ServerSocket(0)){
-            while(true) {
-                Socket socket = serverSocket.accept();
-
-            }
-        }catch(IOException e) {
-            System.out.println(e);
-        }
-
     }
 
     public static void main(String[] args){

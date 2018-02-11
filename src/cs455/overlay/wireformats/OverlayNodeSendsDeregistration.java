@@ -13,11 +13,7 @@ public class OverlayNodeSendsDeregistration implements Event{
         ByteArrayOutputStream baOutputStream = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
         dout.writeByte(msgType);
-        dout.writeByte(IPLength);
-        IPLength = (byte)IPAddress.length;
-        dout.writeInt(IPLength);
-        dout.write(IPAddress);
-        dout.writeInt(portNum);
+
         dout.flush();
         marshaledBytes = baOutputStream.toByteArray();
         baOutputStream.close();
@@ -25,14 +21,11 @@ public class OverlayNodeSendsDeregistration implements Event{
         return marshaledBytes;
     }
 
-    public OverlayNodeSendsRegistration(byte[] marshaledBytes) throws IOException {
+    public OverlayNodeSendsDeregistration(byte[] marshaledBytes) throws IOException {
         ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshaledBytes);
         DataInputStream din = new DataInputStream (new BufferedInputStream(baInputStream));
         msgType = din.readByte();
-        IPLength = din.readByte();
-        byte[] identifierBytes = new byte[IPLength];
-        din.readFully(identifierBytes);
-        portNum = din.readInt();
+
         baInputStream.close();
         din.close();
     }

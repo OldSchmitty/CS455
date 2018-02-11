@@ -23,7 +23,7 @@ public class TCPServerThread extends Thread{
         this.start();
     }
 
-    public byte[] getAddr(){
+    public synchronized byte[] getAddr(){
         return this.serverSocket.getInetAddress().getAddress();
     }
 

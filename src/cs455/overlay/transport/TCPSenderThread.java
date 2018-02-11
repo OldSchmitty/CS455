@@ -19,6 +19,7 @@ public class TCPSenderThread extends Thread
         this.socket = socket;
         dout = new DataOutputStream(socket.getOutputStream());
         open = true;
+        queue = new ArrayList<>();
     }
 
     public synchronized void close(){

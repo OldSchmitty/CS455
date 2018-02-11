@@ -7,23 +7,33 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.TreeMap;
 
 public class Registry implements Node{
     private int portNum;
     private TCPServerThread server;
-    protected ServerSocket serverSocket;
+    private ServerSocket serverSocket;
     private Random random;
     private static final int MAX_NODES_REGISTERED = 128;
 
     public Registry(int portNum){
         this.portNum = portNum;
         random = new Random();
+        try {
+            this.serverSocket = new ServerSocket(portNum);
+        }catch(java.io.IOException e){
+            System.out.println(e);
+        }
         server = new TCPServerThread(this, serverSocket);
     }
 
     private void setup() {
 
+    }
+
+    public String testInfo(){
+        return server.getAddr().toString();
     }
 
     private int generateID(){
@@ -75,6 +85,52 @@ public class Registry implements Node{
     }
 
     public static void main(String[] args){
+        if (args.length == 1){
+            try{
+                int portNum = Integer.parseInt(args[0]);
+                Registry registry = new Registry(portNum);
+                registry.testInfo();
+                Scanner scanner = new Scanner(System.in);
+                String inputString = scanner.next();
+                boolean start = false;
+                while (!(inputString.equals("exit-overlay"))){
+                    switch (inputString){
+                        case "list-messaging-nodes":
+                            System.out.println("TO-DO : list-messaging-Nodes");
+                            break;
+
+                        case "setup-overlay":
+                            inputString = scanner.next();
+                            int nR = Integer.parseInt(inputString);
+                            System.out.println("TO-DO : setup-overlay with nR = " +nR);
+                            break;
+
+                        case "list-routing-tables":
+                            System.out.println("TO-DO : list-routing-tables");
+                            break;
+
+                        case "start":
+                            inputString = scanner.next();
+                            int numRoutingTableEnties = Integer.parseInt(inputString);
+                            start = true;
+                            System.out.println("TO-DO : Start with "+numRoutingTableEnties+" entries");
+                            break;
+
+                        default:
+                            System.out.println(
+                                    "Error: Commands are <print-counters-and-diagnostis> or <exit-overlay>.");
+                    }
+                    inputString = scanner.next();
+                }
+
+            }catch (NumberFormatException e){
+                System.out.println(e);
+            }
+        }
+        else{
+            System.out.println("Error: Incorrect number of arguments "+args.length+
+                    " you must specify a port-num.");
+        }
 
     }
 
