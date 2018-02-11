@@ -31,7 +31,7 @@ public class TCPSenderThread extends Thread
         notify();
     }
 
-    public synchronized void sendData(byte[] dataToSend) throws IOException
+    private synchronized void sendData(byte[] dataToSend) throws IOException
     {
         int dataLength = dataToSend.length;
         dout.writeInt(dataLength);

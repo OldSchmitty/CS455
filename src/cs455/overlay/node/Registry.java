@@ -1,8 +1,9 @@
 package cs455.overlay.node;
+import cs455.overlay.transport.TCPConnectionsCache;
 import cs455.overlay.transport.TCPServerThread;
-import cs455.overlay.wireformats.Event;
-import cs455.overlay.wireformats.EventFactory;
+import cs455.overlay.wireformats.*;
 
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
@@ -13,12 +14,11 @@ public class Registry implements Node{
     private TCPServerThread server;
     protected ServerSocket serverSocket;
     private Random random;
-    private TreeMap<Integer,Socket> registeredNodeMap;
+    private static final int MAX_NODES_REGISTERED = 128;
 
     public Registry(int portNum){
         this.portNum = portNum;
         random = new Random();
-        registeredNodeMap = new TreeMap<>();
         server = new TCPServerThread(this, serverSocket);
     }
 
@@ -27,27 +27,54 @@ public class Registry implements Node{
     }
 
     private int generateID(){
-        return(random.nextInt(127));
+        return(random.nextInt(MAX_NODES_REGISTERED-1));
     }
 
-    private void registerNode(Socket socket){
-        if (registeredNodeMap.size() != 128) {
-            int id = generateID();
-            while (registeredNodeMap.get(id) != null)
+    private int getRandomId(){
+        int id = -1;
+        if (server.table.getNodeNum() < 128) {
+            id = generateID();
+            while (server.table.hasEntry(id))
                 id = generateID();
-            registeredNodeMap.put(id, socket);
-            sendRegistrationStatus(id);
         }
-        else {
-            System.out.println("Error: Can not add node. 128 Nodes already exist.");
-        }
+        return id;
     }
 
-    private void sendRegistrationStatus(int id){
-        
+    private void registerNode(OverlayNodeSendsRegistration msg){
+        String error = "";
+        int id = getRandomId();
+        if (id == -1) {
+            error = "Error: Can not add node. 128 Nodes already exist.";
+        }
+        try{
+            InetAddress addr = InetAddress.getByAddress(msg.getIPAddress());
+            server.addRoute(id,msg.getPortNum(),addr);
+        }catch(java.io.IOException e){
+            System.out.println(e);
+            error = e.toString();
+        }
+        RegistryReportsRegistrationStatus reportMsg = new RegistryReportsRegistrationStatus(
+                id,server.table.getNodeNum(),error);
+        server.table.sendMsg(reportMsg, id);
     }
 
     public void onEvent(Event event){
+        byte type = event.getType();
+        try {
+            switch (type) {
+                case Protocol.OVERLAY_NODE_SENDS_REGISTRATION:
+
+                    OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(event.getBytes());
+                    registerNode(msg);
+                    break;
+
+            }
+        }catch(java.io.IOException e){
+            System.out.println(e);
+        }
+    }
+
+    public static void main(String[] args){
 
     }
 

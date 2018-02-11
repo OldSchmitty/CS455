@@ -39,15 +39,35 @@ public class OverlayNodeSendsRegistration implements Event{
         return marshaledBytes;
     }
 
+    public byte[] getIPAddress() {
+        return IPAddress;
+    }
+
+    public int getPortNum() {
+        return portNum;
+    }
+
     public OverlayNodeSendsRegistration(byte[] marshaledBytes) throws IOException {
         ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshaledBytes);
         DataInputStream din = new DataInputStream (new BufferedInputStream(baInputStream));
         msgType = din.readByte();
-        IPLength = din.readByte();
-        byte[] identifierBytes = new byte[IPLength];
-        din.readFully(identifierBytes);
-        portNum = din.readInt();
+        if (msgType == Protocol.OVERLAY_NODE_SENDS_REGISTRATION) {
+            IPLength = din.readByte();
+            IPAddress = new byte[IPLength];
+            din.readFully(IPAddress);
+            portNum = din.readInt();
+        }
+        else{
+            msgType = -1;
+        }
         baInputStream.close();
         din.close();
+    }
+
+    public OverlayNodeSendsRegistration(byte[] IPAddress, int portNum){
+        this.msgType = Protocol.OVERLAY_NODE_SENDS_REGISTRATION;
+        this.IPAddress = IPAddress;
+        this.IPLength = (byte)this.IPAddress.length;
+        this.portNum = portNum;
     }
 }

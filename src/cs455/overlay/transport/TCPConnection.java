@@ -7,7 +7,7 @@ import cs455.overlay.wireformats.Event;
 public class TCPConnection {
     private TCPSenderThread sender;
     private TCPReceiverThread receiver;
-    TCPConnection(Socket socket, Node node) {
+    public TCPConnection(Socket socket, Node node) {
         try {
             sender = new TCPSenderThread(socket);
         }catch (java.io.IOException e){

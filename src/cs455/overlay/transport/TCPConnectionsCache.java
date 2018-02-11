@@ -1,28 +1,32 @@
 package cs455.overlay.transport;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.ArrayList;
+
 import cs455.overlay.node.Node;
 import cs455.overlay.routing.RoutingTable;
 
 public class TCPConnectionsCache {
+    private ArrayList<TCPConnection> connections;
+    private Node node;
 
-    public TCPConnectionsCache(){
-        routingTable = new RoutingTable();
+    public TCPConnectionsCache(Node node){
+        connections = new ArrayList<>();
+        this.node = node;
     }
 
-    public void addRegistry(String host, int port){
-        try {
-            regSocket = new Socket(host, port);
-        }catch(java.io.IOException e){
-            System.out.println(e);
+    public void addConn(Socket newSock, int port){
+        TCPConnection newConn = new TCPConnection(newSock, node);
+        connections.add(newConn);
+    }
+
+    public void close(){
+        for (TCPConnection conn : connections){
+            conn.close();
         }
     }
 
-    private Socket regSocket;
-    private RoutingTable routingTable;
-
-    public void connectTo(Socket socket, Node node){
-        TCPConnection conn  = new TCPConnection(socket, node);
+    public TCPConnection getConnection(int id){
+        return connections.get(id);
     }
 
     public void addConnection(Socket socket, Node node){
