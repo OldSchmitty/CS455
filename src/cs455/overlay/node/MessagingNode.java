@@ -25,6 +25,7 @@ public class MessagingNode implements Node{
     private  byte[] IPAddress;
     private TCPServerThread server;
     private TCPConnection regConn;
+    private boolean deregistration;
 
     public int getIdNum(){
         return this.idNum;
@@ -52,6 +53,7 @@ public class MessagingNode implements Node{
         }
         this.regConn = new TCPConnection(this.regSocket, this);
         register();
+        this.deregistration = false;
     }
 
     public void addRegistry(InetAddress host, int port){
@@ -70,29 +72,42 @@ public class MessagingNode implements Node{
         }
     }
 
+    public synchronized void setDeregistration(boolean value){
+        this.deregistration = value;
+    }
+
+    public synchronized boolean getDeregistration(){
+        return this.deregistration;
+    }
+
     public void deregister(){
         server.close();
         regConn.close();
     }
 
     public void onEvent(Event event){
-        try{
-            byte type = event.getType();
-            switch(type){
-            case Protocol.REGISTRY_REPORTS_REGISTRATION_STATUS:
-                RegistryReportsRegistrationStatus msg = new RegistryReportsRegistrationStatus(event.getBytes());
-                this.idNum = msg.getSucessStatus();
-                System.out.println(msg.getInformationString());
-                break;
-            }
+        byte type = event.getType();
+        switch(type){
+        case Protocol.REGISTRY_REPORTS_REGISTRATION_STATUS:
+            setup(event);
+            break;
+        case Protocol.REGISTRY_REPORTS_DEREGISTRATION_STATUS:
+            setDeregistration(true);
+            break;
+        }
+    }
 
+    private void setup(Event event){
+        try {
+            RegistryReportsRegistrationStatus msg = new RegistryReportsRegistrationStatus(event.getBytes());
+            setNodeNum(msg.getSucessStatus());
+            System.out.println(msg.getInformationString());
         }catch(java.io.IOException e){
             System.out.println(e);
         }
-
     }
 
-    public void setNodeNum(int nodeNum){
+    private void setNodeNum(int nodeNum){
         if (nodeNum > 0 && nodeNum < 128){
             this.nodeNum = nodeNum;
         }
@@ -123,6 +138,9 @@ public class MessagingNode implements Node{
                                     "Error: Commands are <print-counters-and-diagnostis> or <exit-overlay>.");
                         inputString = scanner.next();
                     }
+                }
+                while(!node.getDeregistration()) {
+
                 }
                 node.deregister();
 

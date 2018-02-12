@@ -77,10 +77,17 @@ public class Registry implements Node{
                     OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(event.getBytes());
                     registerNode(msg);
                     break;
+                case Protocol.OVERLAY_NODE_SENDS_DEREGISTRATION:
+                    OverlayNodeSendsDeregistration msg = new OverlayNodeSendsDeregistration(event.getBytes());
+                    deregisterNode(msg);
             }
         }catch(java.io.IOException e){
             System.out.println(e);
         }
+    }
+
+    public void deregisterNode(OverlayNodeSendsDeregistration msg){
+        if(!server.table.hasEntry(msg.getNodeID())){
     }
 
     public static void main(String[] args){
