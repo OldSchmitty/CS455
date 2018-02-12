@@ -18,18 +18,12 @@ public class MessagingNode implements Node{
     private int nodeNum;
     private InetAddress host;
     private int port;
-    private int idNum;
     protected ServerSocket serverSocket;
     private Socket regSocket;
-    private TCPConnectionsCache cache;
     private  byte[] IPAddress;
     private TCPServerThread server;
     private TCPConnection regConn;
-    private boolean deregistration;
-
-    public int getIdNum(){
-        return this.idNum;
-    }
+    private boolean registryUp;
 
     public MessagingNode(String host, int port){
         try {
@@ -53,7 +47,7 @@ public class MessagingNode implements Node{
         }
         this.regConn = new TCPConnection(this.regSocket, this);
         register();
-        this.deregistration = false;
+        registryUp = true;
     }
 
     public void addRegistry(InetAddress host, int port){
@@ -72,17 +66,10 @@ public class MessagingNode implements Node{
         }
     }
 
-    public synchronized void setDeregistration(boolean value){
-        this.deregistration = value;
-    }
-
-    public synchronized boolean getDeregistration(){
-        return this.deregistration;
-    }
-
     public void deregister(){
-        server.close();
-        regConn.close();
+        OverlayNodeSendsDeregistration msg = new OverlayNodeSendsDeregistration(
+                regConn.getSocket().getLocalAddress().getAddress(),regSocket.getLocalPort(), this.nodeNum);
+        regConn.sendMessage(msg);
     }
 
     public void onEvent(Event event){
@@ -92,7 +79,19 @@ public class MessagingNode implements Node{
             setup(event);
             break;
         case Protocol.REGISTRY_REPORTS_DEREGISTRATION_STATUS:
-            setDeregistration(true);
+            try {
+                RegistryReportsDeregistrationStatus msg = new RegistryReportsDeregistrationStatus(event.getBytes());
+                System.out.println(msg.getInformationString());
+                if(msg.getSucessStatus() == -1){
+                    this.registryUp = false;
+                }
+            }catch(java.io.IOException e){
+                System.out.println(e);
+            }
+            finally{
+                server.close();
+                regConn.close();
+            }
             break;
         }
     }
@@ -120,6 +119,10 @@ public class MessagingNode implements Node{
         return this.nodeNum;
     }
 
+    public boolean getRegistryUp(){
+        return this.registryUp;
+    }
+
     public static void main(String[] args){
         if (args.length == 2){
             try{
@@ -139,10 +142,8 @@ public class MessagingNode implements Node{
                         inputString = scanner.next();
                     }
                 }
-                while(!node.getDeregistration()) {
-
-                }
-                node.deregister();
+                if(node.getRegistryUp())
+                    node.deregister();
 
             }catch (NumberFormatException e){
                 System.out.println(e);

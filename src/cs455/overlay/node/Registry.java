@@ -1,4 +1,5 @@
 package cs455.overlay.node;
+import cs455.overlay.transport.TCPConnection;
 import cs455.overlay.transport.TCPConnectionsCache;
 import cs455.overlay.transport.TCPServerThread;
 import cs455.overlay.wireformats.*;
@@ -58,15 +59,28 @@ public class Registry implements Node{
         }
         try{
             InetAddress addr = InetAddress.getByAddress(msg.getIPAddress());
-            Socket msgNodeSocket = server.getCacheSocket(addr,msg.getPortNum());
-            server.addRoute(id,msgNodeSocket);
+            TCPConnection msgNodeCon = server.getCacheConn(addr,msg.getPortNum());
+            InetAddress conAddr = msgNodeCon.getSocket().getInetAddress();
+            if(conAddr.equals(addr)){
+                server.addRoute(id, 1,msgNodeCon);
+            }
+            else{
+                error = "Error: IP address in Registration message does not match socket address";
+                id = -1;
+            }
+            RegistryReportsRegistrationStatus reportMsg = new RegistryReportsRegistrationStatus(
+                    id,server.table.getNodeNum(),error);
+            if (id != -1) {
+                server.table.sendMsg(reportMsg, id);
+            }
+            else{
+                msgNodeCon.sendMessage(reportMsg);
+            }
+
         }catch(java.io.IOException e){
             System.out.println(e);
             System.exit(1);
         }
-        RegistryReportsRegistrationStatus reportMsg = new RegistryReportsRegistrationStatus(
-                id,server.table.getNodeNum(),error);
-        server.table.sendMsg(reportMsg, id);
     }
 
     public void onEvent(Event event){
@@ -74,12 +88,12 @@ public class Registry implements Node{
         try {
             switch (type) {
                 case Protocol.OVERLAY_NODE_SENDS_REGISTRATION:
-                    OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(event.getBytes());
-                    registerNode(msg);
+                    OverlayNodeSendsRegistration regmsg = new OverlayNodeSendsRegistration(event.getBytes());
+                    registerNode(regmsg);
                     break;
                 case Protocol.OVERLAY_NODE_SENDS_DEREGISTRATION:
-                    OverlayNodeSendsDeregistration msg = new OverlayNodeSendsDeregistration(event.getBytes());
-                    deregisterNode(msg);
+                    OverlayNodeSendsDeregistration deregmsg = new OverlayNodeSendsDeregistration(event.getBytes());
+                    deregisterNode(deregmsg);
             }
         }catch(java.io.IOException e){
             System.out.println(e);
@@ -87,7 +101,41 @@ public class Registry implements Node{
     }
 
     public void deregisterNode(OverlayNodeSendsDeregistration msg){
-        if(!server.table.hasEntry(msg.getNodeID())){
+        int id = msg.getNodeID();
+        String error = "";
+        RegistryReportsDeregistrationStatus deregmsg;
+        int successStatus = -1;
+        if (!server.table.hasEntry(id)){
+            error = "Error: Node "+msg.getNodeID()+" is not in the registry.";
+            successStatus = -1;
+        }
+        else{
+            try {
+                InetAddress msgAddr = InetAddress.getByAddress(msg.getIPAddress());
+                InetAddress socketAddr = server.table.getSocket(id).getInetAddress();
+
+                if (msgAddr.equals(socketAddr)) {
+                    successStatus = id;
+                } else {
+                    successStatus = -1;
+                    error = "Error: Node IP Address in msg does not match Socket Address.";
+                }
+            }catch(java.io.IOException e){
+                System.out.println(e);
+            }
+        }
+        deregmsg = new RegistryReportsDeregistrationStatus(successStatus, error);
+        server.table.sendMsg(deregmsg,id);
+        if (successStatus != -1) {
+            server.table.removeEntry(id);
+        }
+    }
+
+    public void close(){
+        String error = "The registry has been shut down.";
+        RegistryReportsDeregistrationStatus shutdown = new RegistryReportsDeregistrationStatus(-1,error);
+        server.registryExit(shutdown);
+        server.close();
     }
 
     public static void main(String[] args){
@@ -99,7 +147,7 @@ public class Registry implements Node{
                 Scanner scanner = new Scanner(System.in);
                 String inputString = scanner.next();
                 boolean start = false;
-                while (!(inputString.equals("exit-overlay"))){
+                while (!(inputString.equals("exit"))){
                     switch (inputString){
                         case "list-messaging-nodes":
                             System.out.println("TO-DO : list-messaging-Nodes");
@@ -128,6 +176,7 @@ public class Registry implements Node{
                     }
                     inputString = scanner.next();
                 }
+                registry.close();
 
             }catch (NumberFormatException e){
                 System.out.println(e);

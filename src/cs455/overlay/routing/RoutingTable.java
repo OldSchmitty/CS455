@@ -16,8 +16,8 @@ public class RoutingTable {
         this.node = node;
     }
 
-    public synchronized void addEntry (int id, InetAddress address, int port, Node node)throws java.io.IOException{
-        RoutingEntry newEntry = new RoutingEntry(address, port, node);
+    public synchronized void addEntry (int id, InetAddress address, int port, int hops, Node node)throws java.io.IOException{
+        RoutingEntry newEntry = new RoutingEntry(address, port, hops, node);
         table.put(id, newEntry);
     }
 
@@ -38,15 +38,35 @@ public class RoutingTable {
         table.get(id).sendMsg(event);
     }
 
-    public void close(){
+    public synchronized void close(){
         for (RoutingEntry r : table.values()){
             r.close();
         }
     }
 
-    public void addEntry(int id, Socket socket){
-        RoutingEntry newEntry = new RoutingEntry(id, socket, node);
-        table.put(id,newEntry);
+    public synchronized void addEntry(int id, int hops, TCPConnection conn){
+            RoutingEntry newEntry = new RoutingEntry(hops, conn);
+            table.put(id, newEntry);
+    }
+
+    public synchronized int removeEntry(int id){
+        if (table.get(id) == null){
+            return -1;
+        }
+        else{
+            table.remove(id);
+            return id;
+        }
+    }
+
+    public synchronized Socket getSocket(int id){
+        return table.get(id).getSocket();
+    }
+
+    public synchronized void sendAll(Event msg){
+        for(RoutingEntry entry : table.values()){
+            entry.sendMsg(msg);
+        }
     }
 
 

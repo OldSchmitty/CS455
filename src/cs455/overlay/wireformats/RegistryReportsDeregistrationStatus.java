@@ -37,13 +37,11 @@ public class RegistryReportsDeregistrationStatus implements Event{
         return marshaledBytes;
     }
 
-    public RegistryReportsDeregistrationStatus(int sucessStatus, int overlayNum, String errorInfo){
-        this.msgType = Protocol.REGISTRY_REPORTS_REGISTRATION_STATUS;
+    public RegistryReportsDeregistrationStatus(int sucessStatus, String errorInfo){
+        this.msgType = Protocol.REGISTRY_REPORTS_DEREGISTRATION_STATUS;
         this.sucessStatus=sucessStatus;
         if (sucessStatus != -1){
-            this.informationString = "registration request successful. The number of " +
-                    "messaging nodes currently constituting the overlay" +
-                    " is ("+overlayNum+")";
+            this.informationString = "Deregistration request successful.";
         }
         else{
             this.informationString = errorInfo;

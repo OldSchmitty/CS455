@@ -1,7 +1,5 @@
 package cs455.overlay.wireformats;
 
-import sun.security.x509.IPAddressName;
-
 import java.io.*;
 
 public class OverlayNodeSendsDeregistration implements Event{
@@ -17,6 +15,10 @@ public class OverlayNodeSendsDeregistration implements Event{
 
     public int getNodeID(){
         return this.nodeID;
+    }
+
+    public byte[] getIPAddress(){
+        return IPAddress;
     }
 
     public byte[] getBytes() throws IOException {
