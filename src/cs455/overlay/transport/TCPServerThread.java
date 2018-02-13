@@ -31,7 +31,7 @@ public class TCPServerThread extends Thread{
         return this.serverSocket.getInetAddress().getAddress();
     }
 
-    public void addRoute(int id, int port, int hops, InetAddress address) throws java.io.IOException{
+    public void addRoute(int id, InetAddress address, int port, int hops) throws java.io.IOException{
         table.addEntry(id, address, port, hops, this.node);
     }
     public void addRoute(int id, int hops, TCPConnection conn){

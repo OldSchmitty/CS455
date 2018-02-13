@@ -24,6 +24,56 @@ public class MessagingNode implements Node{
     private TCPServerThread server;
     private TCPConnection regConn;
     private boolean registryUp;
+    private int messagesSent = 0;
+    private int messagesReceived = 0;
+    private int messagesRelayed = 0;
+    private long sumOfSent = 0;
+    private long sumOfRecieved = 0;
+
+
+    private synchronized void incrementMessagesSent(){
+        messagesSent++;
+    }
+    private synchronized void incrementMessagesReceived(){
+        messagesReceived++;
+    }
+    private synchronized void incrementMessagesRelayed(){
+        messagesRelayed++;
+    }
+    private synchronized void addToSumOfSent(long num){
+        sumOfSent += num;
+    }
+    private synchronized void addToSumOfReceived(long num){
+        sumOfRecieved += num;
+    }
+    private synchronized int getMessagesSent(){
+        return messagesSent;
+    }
+    private synchronized int getMessagesReceived(){
+        return messagesReceived;
+    }
+    private synchronized int getMessagesRelayed(){
+        return messagesRelayed;
+    }
+    private synchronized long getSumOfSent(){
+        return sumOfSent;
+    }
+    private synchronized long getSumOfReceived(){
+        return sumOfRecieved;
+    }
+
+    private synchronized void resetCounters(){
+        this.messagesSent = 0;
+        this.messagesReceived = 0;
+        this.messagesRelayed = 0;
+        this.sumOfSent = 0;
+        this.sumOfRecieved = 0;
+    }
+
+
+
+
+
 
     public MessagingNode(String host, int port){
         try {
@@ -78,6 +128,9 @@ public class MessagingNode implements Node{
         case Protocol.REGISTRY_REPORTS_REGISTRATION_STATUS:
             setup(event);
             break;
+        case Protocol.REGISTRY_SENDS_NODE_MANIFEST:
+            setupRoutingTable(event);
+            break;
         case Protocol.REGISTRY_REPORTS_DEREGISTRATION_STATUS:
             try {
                 RegistryReportsDeregistrationStatus msg = new RegistryReportsDeregistrationStatus(event.getBytes());
@@ -121,6 +174,28 @@ public class MessagingNode implements Node{
 
     public boolean getRegistryUp(){
         return this.registryUp;
+    }
+
+    private void setupRoutingTable(Event event){
+        int successStatus = -1;
+        String error = "";
+        try {
+            RegistrySendsNodeManifest msg = new RegistrySendsNodeManifest(event.getBytes());
+            for (int i = 0; i < msg.getRoutingTableSize(); i++){
+                int id = msg.getNodeID(i);
+                InetAddress addr = InetAddress.getByAddress(msg.getIP(i));
+                int port = msg.getPort(i);
+                int hops = (int)java.lang.Math.pow(2,i);
+                server.addRoute(id, addr, port, hops);
+            }
+            successStatus = getNodeNum();
+        }catch (java.io.IOException e){
+            System.out.println(e);
+            error = "Node failed to create a socket to another node.";
+        }
+        NodeReportsOverlaySetupStatus returnMsg = new NodeReportsOverlaySetupStatus(successStatus, error);
+        regConn.sendMessage(returnMsg);
+
     }
 
     public static void main(String[] args){

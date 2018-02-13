@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.ArrayList;
 
 public class Registry implements Node{
     private int portNum;
@@ -17,6 +18,8 @@ public class Registry implements Node{
     private ServerSocket serverSocket;
     private Random random;
     private static final int MAX_NODES_REGISTERED = 128;
+    private ArrayList<RegistrySendsNodeManifest> msgs;
+    private int overlaySucessCount;
 
     public Registry(int portNum){
         this.portNum = portNum;
@@ -27,10 +30,21 @@ public class Registry implements Node{
             System.out.println(e);
         }
         server = new TCPServerThread(this, serverSocket);
+        overlaySucessCount = 0;
     }
 
-    private void setup() {
-
+    public void setupOverlay(int nR) {
+        if(server.table.getNodeNum() > 2*nR){
+            msgs = server.table.getRouteMsgs(nR);
+            if(msgs != null) {
+                for (RegistrySendsNodeManifest msg : msgs) {
+                    server.table.sendMsg(msg, msg.getDestinationID());
+                }
+            }
+        }
+        else{
+            System.out.println("There are not enough nodes in the overlay to satisfy nodes > 2*nR");
+        }
     }
 
     public String testInfo(){
@@ -83,6 +97,14 @@ public class Registry implements Node{
         }
     }
 
+    private synchronized void increaseOverlayCounter(){
+        this.overlaySucessCount++;
+    }
+    private synchronized int checkCounter(){
+        return overlaySucessCount;
+    }
+
+
     public void onEvent(Event event){
         byte type = event.getType();
         try {
@@ -94,6 +116,13 @@ public class Registry implements Node{
                 case Protocol.OVERLAY_NODE_SENDS_DEREGISTRATION:
                     OverlayNodeSendsDeregistration deregmsg = new OverlayNodeSendsDeregistration(event.getBytes());
                     deregisterNode(deregmsg);
+                    break;
+                case Protocol.NODE_REPORTS_OVERLAY_SETUP_STATUS:
+                    increaseOverlayCounter();
+                    if(checkCounter() == server.table.getNodeNum()){
+                        System.out.println("All nodes in registry have successfully set up the overlay.");
+                    }
+                    break;
             }
         }catch(java.io.IOException e){
             System.out.println(e);
@@ -132,9 +161,6 @@ public class Registry implements Node{
     }
 
     public void close(){
-        String error = "The registry has been shut down.";
-        RegistryReportsDeregistrationStatus shutdown = new RegistryReportsDeregistrationStatus(-1,error);
-        server.registryExit(shutdown);
         server.close();
     }
 
@@ -156,7 +182,12 @@ public class Registry implements Node{
                         case "setup-overlay":
                             inputString = scanner.next();
                             int nR = Integer.parseInt(inputString);
-                            System.out.println("TO-DO : setup-overlay with nR = " +nR);
+                            if (nR<1){
+                                System.out.println("Error: nR must be greater than 0.");
+                            }
+                            else{
+                                registry.setupOverlay(nR);
+                            }
                             break;
 
                         case "list-routing-tables":

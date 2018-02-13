@@ -11,18 +11,21 @@ public class RoutingEntry {
     private TCPConnection conn;
     private Node node;
     private int hops;
+    private int ID;
 
-    public RoutingEntry(InetAddress address, int port, int hops, Node node) throws java.io.IOException{
+    public RoutingEntry(InetAddress address, int port, int hops, Node node, int ID) throws java.io.IOException{
         this.port = port;
         this.node = node;
         this.hops = hops;
         Socket socket = new Socket(address, port);
         conn = new TCPConnection(socket, this.node);
+        this.ID = ID;
     }
 
-    RoutingEntry(int hops, TCPConnection conn){
+    RoutingEntry(int hops, TCPConnection conn, int ID){
         this.hops = hops;
         this.conn = conn;
+        this.ID = ID;
     }
 
 
@@ -36,6 +39,10 @@ public class RoutingEntry {
 
     public void close(){
         conn.close();
+    }
+
+    public int getID(){
+        return ID;
     }
 
 }
