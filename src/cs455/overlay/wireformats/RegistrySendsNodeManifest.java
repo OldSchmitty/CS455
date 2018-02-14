@@ -18,18 +18,22 @@ public class RegistrySendsNodeManifest implements Event{
     public int getDestinationID() {
         return this.destinationID;
     }
+    public int[] getListOfNodeIDs(){
+        return listOfNodeIDs;
+    }
 
-    public RegistrySendsNodeManifest(ArrayList<RoutingEntry> list, int[] listOfNodeIDs){
+    public RegistrySendsNodeManifest(ArrayList<RoutingEntry> list, int[] listOfNodeIDs, int id){
         routes = new ArrayList<RouteInfo>();
+        this.routingTableSize = (byte)list.size();
         this.numberOfNodeIDs = (byte)listOfNodeIDs.length;
         this.listOfNodeIDs = listOfNodeIDs;
-        this.destinationID = list.get(0).getID();
+        this.destinationID = id;
         for (RoutingEntry re : list){
             RouteInfo rInfo = new RouteInfo();
             rInfo.IPAddress = re.getSocket().getInetAddress().getAddress();
             rInfo.IPLength = (byte)rInfo.IPAddress.length;
             rInfo.nodeID = re.getID();
-            rInfo.port = re.getSocket().getPort();
+            rInfo.port = re.getPort();
             routes.add(rInfo);
         }
     }

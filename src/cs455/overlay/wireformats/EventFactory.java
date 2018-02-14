@@ -4,14 +4,15 @@ import cs455.overlay.node.Node;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.net.Socket;
 
 public class EventFactory {
-    public static void parse(byte[] data, Node node) throws java.io.IOException{
+    public static void parse(byte[] data, Node node, Socket socket) throws java.io.IOException{
         ByteArrayInputStream baInputStream = new ByteArrayInputStream(data.clone());
         DataInputStream din = new DataInputStream (new BufferedInputStream(baInputStream));
         int msgType = din.readByte();
         Event event = createEvent(msgType, data);
-        node.onEvent(event);
+        node.onEvent(event, socket);
     }
 
     public static Event createEvent(int msgType, byte[] data) throws java.io.IOException{

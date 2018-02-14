@@ -2,22 +2,27 @@ package cs455.overlay.routing;
 import cs455.overlay.node.Node;
 import cs455.overlay.transport.TCPConnection;
 import cs455.overlay.wireformats.Event;
+import cs455.overlay.wireformats.OverlayNodeSendsData;
 import cs455.overlay.wireformats.RegistrySendsNodeManifest;
 
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.TreeMap;
-import java.util.ArrayList;
+import java.util.*;
 
 public class RoutingTable {
     private Node node;
     private TreeMap<Integer, RoutingEntry>  table;
+    private Random random;
+    private int nodeID;
 
     public RoutingTable(Node node){
         this.table = new TreeMap<>();
         this.node = node;
+        random = new Random();
+    }
+
+    public void setID(int num){
+        this.nodeID = num;
     }
 
     public synchronized void addEntry (int id, InetAddress address, int port, int hops, Node node)throws java.io.IOException{
@@ -25,8 +30,8 @@ public class RoutingTable {
         table.put(id, newEntry);
     }
 
-    public synchronized void addEntry(int id, int hops, TCPConnection conn){
-        RoutingEntry newEntry = new RoutingEntry(hops, conn, id);
+    public synchronized void addEntry(int id, int hops, TCPConnection conn, int port){
+        RoutingEntry newEntry = new RoutingEntry(hops, conn, id, port);
         table.put(id, newEntry);
     }
 
@@ -51,29 +56,42 @@ public class RoutingTable {
         }
 
         else{
-            RoutingEntry route = null;
             RoutingEntry currentRoute = null;
             int currentDistance = -1;
             int distance = -1;
-            Collection<RoutingEntry> c = table.values();
-            Iterator<RoutingEntry> itr = c.iterator();
-            if (itr.hasNext()){
-                currentRoute = itr.next();
-                currentDistance = id - currentRoute.getID();
-            }
-            while (itr.hasNext()){
-                route = itr.next();
-                distance = id-route.getID();
-                if (distance > 0 && currentDistance > 0){
-                    if (distance < currentDistance){
+            Set<Integer> set = table.keySet();
+            Integer[] array = set.toArray(new Integer[set.size()]);
+            int itr = 0;
+            int currentKey = array[itr];
+            currentDistance = id - currentKey;
+            currentRoute = table.get(currentKey);
+            itr++;
+            while (itr < array.length){
+                distance = id - array[itr];
+                currentKey = array[itr];
+                if (distance > 0 && currentDistance > 0) {
+                    if (distance < currentDistance) {
                         currentDistance = distance;
-                        currentRoute = route;
-                    }
-                    else if (distance > 0 && currentDistance < 0){
-                        currentDistance = distance;
-                        currentRoute = route;
+                        currentRoute = table.get(currentKey);
                     }
                 }
+                else if (distance > 0 && currentDistance < 0){
+                    currentDistance = distance;
+                    currentRoute = table.get(currentKey);
+                }
+                else if (distance < 0 && currentDistance < 0){
+                    if (distance < currentDistance){
+                        currentRoute = table.get(currentKey);
+                        currentDistance = distance;
+                    }
+                }
+                itr++;
+            }
+            try{
+                OverlayNodeSendsData msg = new OverlayNodeSendsData(event.getBytes());
+                System.out.println("Node : "+nodeID+" is relaying a packet for "+msg.getDestinationID()+ " to " + currentRoute.getID());
+            }catch (java.io.IOException e){
+                System.out.println(e);
             }
             currentRoute.sendMsg(event);
         }
@@ -106,8 +124,8 @@ public class RoutingTable {
         }
     }
 
-    private RegistrySendsNodeManifest makeRouteMsg(ArrayList<RoutingEntry> routes, int[] idArray){
-        RegistrySendsNodeManifest msg = new RegistrySendsNodeManifest(routes, idArray);
+    private RegistrySendsNodeManifest makeRouteMsg(ArrayList<RoutingEntry> routes, int[] idArray, int id){
+        RegistrySendsNodeManifest msg = new RegistrySendsNodeManifest(routes, idArray, id);
         return msg;
     }
 
@@ -115,36 +133,32 @@ public class RoutingTable {
     public synchronized ArrayList<RegistrySendsNodeManifest> getRouteMsgs(int nR){
         int[] idArray = new int[table.size()];
         int index = 0;
-        for(RoutingEntry re : table.values()){
-            idArray[index] = re.getID();
+        for(int key : table.keySet()){
+            idArray[index] = table.get(key).getID();
             index ++;
         }
-        Collection<RoutingEntry> c = table.values();
-        Iterator<RoutingEntry> currentNode = c.iterator();
-        RoutingEntry route = null;
-        RoutingEntry currentEntry;
+        Set<Integer> set = table.keySet();
+        Integer[] array = set.toArray(new Integer[set.size()]);
+
+        int key = -1;
+        int currentKey;
         ArrayList<RegistrySendsNodeManifest> msgList = new ArrayList<RegistrySendsNodeManifest>();
-        while (currentNode.hasNext()) {
+        for(int currentIndex = 0; currentIndex < array.length; currentIndex++) {
             ArrayList<RoutingEntry> routeList = new ArrayList<RoutingEntry>();
-            currentEntry = currentNode.next();
-            Iterator<RoutingEntry> itr = c.iterator();
-            route = itr.next();
-            while (!route.equals(currentEntry)){
-                route = itr.next();
-            }
+            currentKey = array[currentIndex];
             int count = 1;
             while (count <= nR) {
-                int next = (int) java.lang.Math.pow(2, count) - 1;
+                int itr = currentIndex;
+                int next = (int) java.lang.Math.pow(2, count - 1);
                 for (int i = 0; i < next; i++) {
-                    if (itr.hasNext()) {
-                        route = itr.next();
-                    } else {
-                        itr = c.iterator();
-                        route = itr.next();
+                    itr++;
+                    if (itr == array.length){
+                        itr = 0;
                     }
                 }
-                if (!currentNode.equals(itr)) {
-                    routeList.add(route);
+                key = array[itr];
+                if (key != currentKey) {
+                    routeList.add(table.get(key));
                 } else {
                     System.out.println(
                             "A routing table of " + nR + " size results in a node including itself in its routing table.");
@@ -153,10 +167,25 @@ public class RoutingTable {
                 count++;
 
             }
-            msgList.add(makeRouteMsg(routeList, idArray));
+            msgList.add(makeRouteMsg(routeList, idArray, currentKey));
         }
 
         return msgList;
+    }
+
+    public long startTask(int num, int[] nodeIDs, int nodeNum){
+        long sumOfSent = 0;
+        for (int i = 0; i < num; i++){
+            int payload = random.nextInt();
+            int destination = nodeIDs[random.nextInt(nodeIDs.length)];
+            while (destination == nodeNum){
+                destination = nodeIDs[random.nextInt(nodeIDs.length)];
+            }
+            OverlayNodeSendsData msg = new OverlayNodeSendsData(destination,nodeNum,payload);
+            sendMsg(msg, destination);
+            sumOfSent += payload;
+        }
+        return sumOfSent;
     }
 
 }

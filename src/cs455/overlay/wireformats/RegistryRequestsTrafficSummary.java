@@ -1,9 +1,8 @@
 package cs455.overlay.wireformats;
-
 import java.io.*;
 
 public class RegistryRequestsTrafficSummary implements Event{
-    private byte msgType;
+    private byte msgType = Protocol.REGISTRY_REQUESTS_TRAFFIC_SUMMARY;
 
     public byte getType(){
         return msgType;
@@ -12,7 +11,7 @@ public class RegistryRequestsTrafficSummary implements Event{
         byte[] marshaledBytes = null;
         ByteArrayOutputStream baOutputStream = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(baOutputStream));
-
+        dout.writeByte(msgType);
         dout.flush();
         marshaledBytes = baOutputStream.toByteArray();
         baOutputStream.close();
@@ -24,8 +23,9 @@ public class RegistryRequestsTrafficSummary implements Event{
         ByteArrayInputStream baInputStream = new ByteArrayInputStream(marshaledBytes);
         DataInputStream din = new DataInputStream (new BufferedInputStream(baInputStream));
         msgType = din.readByte();
-
         baInputStream.close();
         din.close();
     }
+    public RegistryRequestsTrafficSummary(){}
+
 }

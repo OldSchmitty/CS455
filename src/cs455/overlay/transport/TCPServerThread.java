@@ -4,11 +4,11 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import cs455.overlay.node.Node;
+import cs455.overlay.routing.RoutingEntry;
 import cs455.overlay.routing.RoutingTable;
 import cs455.overlay.wireformats.Event;
 
 public class TCPServerThread extends Thread{
-    //private Queue<byte[]> queue;
     private TCPConnectionsCache cache;
     private Node node;
     private ServerSocket serverSocket;
@@ -23,8 +23,9 @@ public class TCPServerThread extends Thread{
         this.table = new RoutingTable(this.node);
         this.start();
     }
-    public TCPConnection getCacheConn(InetAddress address, int port){
-        return cache.getBySocket(address, port);
+
+    public TCPConnection getCacheConn(Socket socket){
+        return cache.getBySocket(socket);
     }
 
     public synchronized byte[] getAddr(){
@@ -34,8 +35,8 @@ public class TCPServerThread extends Thread{
     public void addRoute(int id, InetAddress address, int port, int hops) throws java.io.IOException{
         table.addEntry(id, address, port, hops, this.node);
     }
-    public void addRoute(int id, int hops, TCPConnection conn){
-        table.addEntry(id, hops, conn);
+    public void addRoute(int id, int hops, TCPConnection conn, int port){
+        table.addEntry(id, hops, conn, port);
     }
 
     public void close(){
@@ -47,6 +48,10 @@ public class TCPServerThread extends Thread{
         }
     }
 
+    public int getServerSocketPort() {
+        return serverSocket.getLocalPort();
+    }
+
     public void registryExit(Event msg){
         cache.sendAll(msg);
     }
@@ -55,7 +60,7 @@ public class TCPServerThread extends Thread{
         try{
             while(!done) {
                 Socket socket = serverSocket.accept();
-                cache.addConnection(socket, node);
+                cache.addConnection(socket, node, socket.getPort());
             }
         }catch(java.io.IOException e) {
             if(!(e instanceof java.net.SocketException))

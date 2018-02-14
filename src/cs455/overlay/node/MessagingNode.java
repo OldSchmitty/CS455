@@ -4,6 +4,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.IOException;
 import java.util.Scanner;
+
 import cs455.overlay.routing.RoutingTable;
 import cs455.overlay.transport.TCPConnection;
 import cs455.overlay.transport.TCPServerThread;
@@ -23,6 +24,7 @@ public class MessagingNode implements Node{
     private  byte[] IPAddress;
     private TCPServerThread server;
     private TCPConnection regConn;
+    private int[] nodeIDs;
     private boolean registryUp;
     private int messagesSent = 0;
     private int messagesReceived = 0;
@@ -70,11 +72,6 @@ public class MessagingNode implements Node{
         this.sumOfRecieved = 0;
     }
 
-
-
-
-
-
     public MessagingNode(String host, int port){
         try {
             this.host = InetAddress.getByName(host);
@@ -95,7 +92,7 @@ public class MessagingNode implements Node{
             System.out.println("Error: Could not connect to "+host+" at port number "+port);
             System.exit(1);
         }
-        this.regConn = new TCPConnection(this.regSocket, this);
+        this.regConn = new TCPConnection(this.regSocket, this, this.port);
         register();
         registryUp = true;
     }
@@ -110,7 +107,7 @@ public class MessagingNode implements Node{
 
     public void register(){
         OverlayNodeSendsRegistration msg = new OverlayNodeSendsRegistration(
-                regConn.getSocket().getLocalAddress().getAddress(), this.regSocket.getLocalPort());
+                regConn.getSocket().getLocalAddress().getAddress(), server.getServerSocketPort());
         if (msg.getType() != -1){
             regConn.sendMessage(msg);
         }
@@ -122,7 +119,7 @@ public class MessagingNode implements Node{
         regConn.sendMessage(msg);
     }
 
-    public void onEvent(Event event){
+    public void onEvent(Event event, Socket socket){
         byte type = event.getType();
         switch(type){
         case Protocol.REGISTRY_REPORTS_REGISTRATION_STATUS:
@@ -130,6 +127,23 @@ public class MessagingNode implements Node{
             break;
         case Protocol.REGISTRY_SENDS_NODE_MANIFEST:
             setupRoutingTable(event);
+            break;
+        case Protocol.OVERLAY_NODE_SENDS_DATA:
+            receiveData(event);
+            break;
+        case Protocol.REGISTRY_REQUESTS_TRAFFIC_SUMMARY:
+            sendSummary();
+            break;
+        case Protocol.REGISTRY_REQUESTS_TASK_INITIATE:
+            try {
+                RegistryRequestsTaskInitiate taskMsg = new RegistryRequestsTaskInitiate(event.getBytes());
+                System.out.println("Task initiating, sending "+taskMsg.getNumberOfPackets()+" packets");
+                long sum = server.table.startTask(taskMsg.getNumberOfPackets(), nodeIDs, nodeNum);
+                addToSumOfSent(sum);
+                sendTaskFinished();
+            }catch(java.io.IOException e){
+                System.out.println(e);
+            }
             break;
         case Protocol.REGISTRY_REPORTS_DEREGISTRATION_STATUS:
             try {
@@ -149,18 +163,36 @@ public class MessagingNode implements Node{
         }
     }
 
+    private void receiveData(Event event){
+        try{
+            OverlayNodeSendsData msg = new OverlayNodeSendsData(event.getBytes());
+            if(msg.getDestinationID() == nodeNum){
+                incrementMessagesReceived();
+                addToSumOfReceived(msg.getPayload());
+            }
+            else{
+                incrementMessagesRelayed();
+                msg.addTrace(nodeNum);
+                server.table.sendMsg(event, msg.getDestinationID());
+            }
+        }catch (java.io.IOException e){
+            System.out.println(e);
+        }
+    }
+
     private void setup(Event event){
         try {
             RegistryReportsRegistrationStatus msg = new RegistryReportsRegistrationStatus(event.getBytes());
             setNodeNum(msg.getSucessStatus());
             System.out.println(msg.getInformationString());
+            server.table.setID(nodeNum);
         }catch(java.io.IOException e){
             System.out.println(e);
         }
     }
 
     private void setNodeNum(int nodeNum){
-        if (nodeNum > 0 && nodeNum < 128){
+        if (nodeNum >= 0 && nodeNum < 128){
             this.nodeNum = nodeNum;
         }
         else{
@@ -189,6 +221,8 @@ public class MessagingNode implements Node{
                 server.addRoute(id, addr, port, hops);
             }
             successStatus = getNodeNum();
+            nodeIDs = msg.getListOfNodeIDs();
+
         }catch (java.io.IOException e){
             System.out.println(e);
             error = "Node failed to create a socket to another node.";
@@ -197,6 +231,21 @@ public class MessagingNode implements Node{
         regConn.sendMessage(returnMsg);
 
     }
+
+    private void sendTaskFinished(){
+        OverlayNodeReportsTaskFinished msg = new OverlayNodeReportsTaskFinished(
+                regConn.getSocket().getLocalAddress().getAddress(), this.regSocket.getLocalPort(), nodeNum);
+        regConn.sendMessage(msg);
+    }
+
+    private void sendSummary(){
+        OverlayNodeReportsTrafficSummary msg = new OverlayNodeReportsTrafficSummary(
+                nodeNum,getMessagesSent(), getMessagesRelayed(), getSumOfSent(),
+                getMessagesReceived(), getSumOfReceived());
+        regConn.sendMessage(msg);
+        resetCounters();
+    }
+
 
     public static void main(String[] args){
         if (args.length == 2){

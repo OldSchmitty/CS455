@@ -4,12 +4,18 @@ import java.io.*;
 
 public class NodeReportsOverlaySetupStatus implements Event{
     private byte msgType = Protocol.NODE_REPORTS_OVERLAY_SETUP_STATUS;
-    int successStatus;
-    byte lengthOfInfo;
-    String informationString;
+    private int successStatus;
+    private byte lengthOfInfo;
+    private String informationString;
 
     public byte getType(){
         return msgType;
+    }
+    public int getSuccessStatus(){
+        return successStatus;
+    }
+    public String getInformationString(){
+        return informationString;
     }
 
     public byte[] getBytes() throws IOException {
@@ -33,7 +39,6 @@ public class NodeReportsOverlaySetupStatus implements Event{
         this.successStatus = successStatus;
         if (successStatus != -1){
             informationString = "Overlay Setup was a Success for node "+successStatus+".";
-
         }
         else{
             informationString = error;

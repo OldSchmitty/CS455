@@ -8,9 +8,11 @@ public class TCPConnection {
     private TCPSenderThread sender;
     private TCPReceiverThread receiver;
     private Socket socket;
-    public TCPConnection(Socket socket, Node node) {
+    private int port;
+    public TCPConnection(Socket socket, Node node, int port) {
         try {
             this.socket = socket;
+            this.port = port;
             sender = new TCPSenderThread(this.socket);
         }catch (java.io.IOException e){
             System.out.println(e);
@@ -27,6 +29,9 @@ public class TCPConnection {
 
     public Socket getSocket() {
         return socket;
+    }
+    public int getPort(){
+        return port;
     }
 
     public void close(){

@@ -12,14 +12,16 @@ import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.ArrayList;
 
+
 public class Registry implements Node{
     private int portNum;
     private TCPServerThread server;
     private ServerSocket serverSocket;
+    private ArrayList<Socket> socketList;
     private Random random;
     private static final int MAX_NODES_REGISTERED = 128;
     private ArrayList<RegistrySendsNodeManifest> msgs;
-    private int overlaySucessCount;
+    private int overlaySuccessCount;
 
     public Registry(int portNum){
         this.portNum = portNum;
@@ -30,12 +32,13 @@ public class Registry implements Node{
             System.out.println(e);
         }
         server = new TCPServerThread(this, serverSocket);
-        overlaySucessCount = 0;
+        overlaySuccessCount = 0;
     }
 
     public void setupOverlay(int nR) {
         if(server.table.getNodeNum() > 2*nR){
             msgs = server.table.getRouteMsgs(nR);
+            listRoutingTables();
             if(msgs != null) {
                 for (RegistrySendsNodeManifest msg : msgs) {
                     server.table.sendMsg(msg, msg.getDestinationID());
@@ -65,7 +68,7 @@ public class Registry implements Node{
         return id;
     }
 
-    private void registerNode(OverlayNodeSendsRegistration msg){
+    private void registerNode(OverlayNodeSendsRegistration msg, Socket socket){
         String error = "";
         int id = getRandomId();
         if (id == -1) {
@@ -73,10 +76,10 @@ public class Registry implements Node{
         }
         try{
             InetAddress addr = InetAddress.getByAddress(msg.getIPAddress());
-            TCPConnection msgNodeCon = server.getCacheConn(addr,msg.getPortNum());
+            TCPConnection msgNodeCon = server.getCacheConn(socket);
             InetAddress conAddr = msgNodeCon.getSocket().getInetAddress();
             if(conAddr.equals(addr)){
-                server.addRoute(id, 1,msgNodeCon);
+                server.addRoute(id, 1,msgNodeCon, msg.getPortNum());
             }
             else{
                 error = "Error: IP address in Registration message does not match socket address";
@@ -98,33 +101,91 @@ public class Registry implements Node{
     }
 
     private synchronized void increaseOverlayCounter(){
-        this.overlaySucessCount++;
+        this.overlaySuccessCount++;
     }
     private synchronized int checkCounter(){
-        return overlaySucessCount;
+        return overlaySuccessCount;
     }
+    private synchronized void resetCounter() {this.overlaySuccessCount = 0;}
 
 
-    public void onEvent(Event event){
+    public void onEvent(Event event, Socket socket){
         byte type = event.getType();
         try {
             switch (type) {
                 case Protocol.OVERLAY_NODE_SENDS_REGISTRATION:
                     OverlayNodeSendsRegistration regmsg = new OverlayNodeSendsRegistration(event.getBytes());
-                    registerNode(regmsg);
+                    registerNode(regmsg, socket);
                     break;
                 case Protocol.OVERLAY_NODE_SENDS_DEREGISTRATION:
                     OverlayNodeSendsDeregistration deregmsg = new OverlayNodeSendsDeregistration(event.getBytes());
                     deregisterNode(deregmsg);
                     break;
+                case Protocol.OVERLAY_NODE_REPORTS_TASK_FINISHED:
+                    synchronized (this) {
+                        increaseOverlayCounter();
+                        OverlayNodeReportsTaskFinished finishMsg = new OverlayNodeReportsTaskFinished(event.getBytes());
+                        System.out.println("Node " + finishMsg.getNodeID() + " has reported task as finished");
+                        if (checkCounter() == server.table.getNodeNum()) {
+                            try {
+                                Thread.sleep(15000);
+                                System.out.println("Registry Requesting Summary information");
+                                requestSummary();
+                            } catch (java.lang.InterruptedException e) {
+                                System.out.println(e);
+                            }
+                        }
+                    }
+                    break;
+                case Protocol.OVERLAY_NODE_REPORTS_TRAFFIC_SUMMARY:
+                    try{
+                        OverlayNodeReportsTrafficSummary summaryMsg = new
+                                OverlayNodeReportsTrafficSummary(event.getBytes());
+                        System.out.println("Got summary from Node" + summaryMsg.getNodeID());
+                    }catch(java.io.IOException e){
+                        System.out.println(e);
+                    }
+
+                    break;
                 case Protocol.NODE_REPORTS_OVERLAY_SETUP_STATUS:
-                    increaseOverlayCounter();
+                    NodeReportsOverlaySetupStatus statusMsg = new NodeReportsOverlaySetupStatus(event.getBytes());
+                    System.out.println(statusMsg.getInformationString());
+                    if (statusMsg.getSuccessStatus() == -1){
+                        System.out.println("A node failed to setup the overlay: ");
+                        System.out.println("Please exit registry and all nodes and try again.");
+                    }
+                    else {
+                        increaseOverlayCounter();
+                    }
                     if(checkCounter() == server.table.getNodeNum()){
                         System.out.println("All nodes in registry have successfully set up the overlay.");
+                        resetCounter();
                     }
                     break;
             }
         }catch(java.io.IOException e){
+            System.out.println(e);
+        }
+    }
+
+    private void requestSummary(){
+        RegistryRequestsTrafficSummary msg = new RegistryRequestsTrafficSummary();
+        server.table.sendAll(msg);
+    }
+
+    public void listRoutingTables(){
+        try {
+            for (RegistrySendsNodeManifest msg : msgs) {
+                System.out.println("Routing table for Node: " + msg.getDestinationID());
+                for (int i = 0; i < msg.getRoutingTableSize(); i++) {
+                    System.out.println("Entry " + (i + 1) + ":  IP = " + InetAddress.getByAddress(msg.getIP(i)) +
+                            "        port = " + msg.getPort(i) + "         id = " + msg.getNodeID(i));
+                }
+                System.out.println();
+                System.out.println();
+                System.out.println();
+            }
+        }catch (java.net.UnknownHostException e){
             System.out.println(e);
         }
     }
@@ -164,6 +225,12 @@ public class Registry implements Node{
         server.close();
     }
 
+    public void taskStart(int num){
+        RegistryRequestsTaskInitiate msg = new RegistryRequestsTaskInitiate(num);
+        server.table.sendAll(msg);
+    }
+
+
     public static void main(String[] args){
         if (args.length == 1){
             try{
@@ -191,14 +258,14 @@ public class Registry implements Node{
                             break;
 
                         case "list-routing-tables":
-                            System.out.println("TO-DO : list-routing-tables");
+                            registry.listRoutingTables();
                             break;
 
                         case "start":
                             inputString = scanner.next();
-                            int numRoutingTableEnties = Integer.parseInt(inputString);
-                            start = true;
-                            System.out.println("TO-DO : Start with "+numRoutingTableEnties+" entries");
+                            int numOfPackets = Integer.parseInt(inputString);
+                            registry.taskStart(numOfPackets);
+
                             break;
 
                         default:

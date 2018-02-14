@@ -18,14 +18,15 @@ public class RoutingEntry {
         this.node = node;
         this.hops = hops;
         Socket socket = new Socket(address, port);
-        conn = new TCPConnection(socket, this.node);
+        conn = new TCPConnection(socket, this.node, port);
         this.ID = ID;
     }
 
-    RoutingEntry(int hops, TCPConnection conn, int ID){
+    RoutingEntry(int hops, TCPConnection conn, int ID, int port){
         this.hops = hops;
         this.conn = conn;
         this.ID = ID;
+        this.port = port;
     }
 
 
@@ -35,6 +36,10 @@ public class RoutingEntry {
 
     public Socket getSocket(){
         return conn.getSocket();
+    }
+
+    public int getPort() {
+        return port;
     }
 
     public void close(){

@@ -28,7 +28,7 @@ public class TCPReceiverThread extends Thread{
                 dataLength = din.readInt();
                 byte[] data = new byte[dataLength];
                 din.readFully(data, 0, dataLength);
-                EventFactory.parse(data, node);
+                EventFactory.parse(data, node, socket);
             } catch (SocketException se) {
                 //System.out.println(se.getMessage());
                 break;

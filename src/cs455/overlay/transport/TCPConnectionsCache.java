@@ -27,21 +27,20 @@ public class TCPConnectionsCache {
         return connections.get(id);
     }
 
-    public synchronized TCPConnection getBySocket(InetAddress address, int port){
+    public synchronized TCPConnection getBySocket(Socket socket){
         Socket rSocket;
-
         for(TCPConnection conn : connections){
             rSocket = conn.getSocket();
-            if(rSocket.getInetAddress().equals(address) && rSocket.getPort() == port){
+            if(rSocket == socket){
                 return conn;
             }
         }
-        System.out.println("Failed to find the socket for "+address+" at port "+port);
+        System.out.println("Failed to find a socket connection, reference was lost.");
         return null;
     }
 
-    public synchronized int addConnection(Socket socket, Node node){
-        TCPConnection conn = new TCPConnection(socket, node);
+    public synchronized int addConnection(Socket socket, Node node, int port){
+        TCPConnection conn = new TCPConnection(socket, node, port);
         connections.add(conn);
         return connections.size()-1;
     }
