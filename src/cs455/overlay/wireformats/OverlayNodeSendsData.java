@@ -20,6 +20,7 @@ public class OverlayNodeSendsData implements Event{
         }
         newDissimination[newDissimination.length-1] = id;
         disseminationTraceLength++;
+        disseminationTrace = newDissimination;
     }
 
     public int getDestinationID(){

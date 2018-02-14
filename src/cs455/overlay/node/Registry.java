@@ -155,6 +155,7 @@ public class Registry implements Node{
                     try{
                         OverlayNodeReportsTrafficSummary summaryMsg = new
                                 OverlayNodeReportsTrafficSummary(event.getBytes().clone());
+                        System.out.println("Node "+summaryMsg.getNodeID()+" has reported its traffic summary.");
                         synchronized (this){
                             stats.addItem(summaryMsg.getNodeID(), summaryMsg.getPacketsSent(),
                                     summaryMsg.getNumberOfPacketsReceived(), summaryMsg.getPacketsRelayed(),

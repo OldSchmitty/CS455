@@ -167,26 +167,21 @@ public class RoutingTable {
         return msgList;
     }
 
-    public long startTask(int num, int[] nodeIDs, int nodeNum){
-        long sumOfSent = 0;
-        byte[] bytes;
-        for (int i = 0; i < num; i++){
-            int payload = random.nextInt();
-            int destination = nodeIDs[random.nextInt(nodeIDs.length)];
-            while (destination == nodeNum){
-                destination = nodeIDs[random.nextInt(nodeIDs.length)];
-            }
-            OverlayNodeSendsData msg = new OverlayNodeSendsData(destination,nodeNum,payload);
-            try {
-                 bytes= msg.getBytes().clone();
-                sendMsg(bytes, destination);
-                sumOfSent += payload;
-            }catch (java.io.IOException e){
-                System.out.println(e);
-            }
+    public long startTask(int[] nodeIDs, int nodeNum){
+        byte[] bytes ;
+        int payload = random.nextInt();
+        int destination = nodeIDs[random.nextInt(nodeIDs.length)];
+        while (destination == nodeNum){
+            destination = nodeIDs[random.nextInt(nodeIDs.length)];
         }
-        System.gc();
-        return sumOfSent;
+        OverlayNodeSendsData msg = new OverlayNodeSendsData(destination,nodeNum,payload);
+        try {
+             bytes= msg.getBytes().clone();
+            sendMsg(bytes, destination);
+        }catch (java.io.IOException e){
+            System.out.println(e);
+        }
+        return payload;
     }
 
     public void printTable(){

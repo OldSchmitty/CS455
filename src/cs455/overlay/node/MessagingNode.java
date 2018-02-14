@@ -149,8 +149,12 @@ public class MessagingNode implements Node{
                     try {
                         RegistryRequestsTaskInitiate taskMsg = new RegistryRequestsTaskInitiate(bytes);
                         System.out.println(new String("Task initiating, sending ") + taskMsg.getNumberOfPackets() + new String(" packets"));
-                        long sum = server.table.startTask(taskMsg.getNumberOfPackets(), nodeIDs, nodeNum);
-                        addToSumOfSent(sum);
+                        int num = taskMsg.getNumberOfPackets();
+                        for (int i = 0; i < num; i++) {
+                            long sum = server.table.startTask(nodeIDs, nodeNum);
+                            addToSumOfSent(sum);
+                            incrementMessagesSent();
+                        }
                         sendTaskFinished();
                         System.gc();
                     } catch (java.io.IOException e) {
@@ -172,8 +176,7 @@ public class MessagingNode implements Node{
                     }
                     break;
             }
-        }
-        catch(java.io.IOException e){
+        }catch(java.io.IOException e){
                 System.out.println(e);
             }
 
@@ -263,15 +266,17 @@ public class MessagingNode implements Node{
     }
 
     private void sendSummary(){
-        OverlayNodeReportsTrafficSummary msg = new OverlayNodeReportsTrafficSummary(
-                nodeNum,getMessagesSent(), getMessagesRelayed(), getSumOfSent(),
-                getMessagesReceived(), getSumOfReceived());
-        try {
-            regConn.sendMessage(msg.getBytes().clone());
-        }catch (java.io.IOException e){
-            System.out.println(e);
+        synchronized (this) {
+            OverlayNodeReportsTrafficSummary msg = new OverlayNodeReportsTrafficSummary(
+                    nodeNum, getMessagesSent(), getMessagesRelayed(), getSumOfSent(),
+                    getMessagesReceived(), getSumOfReceived());
+            try {
+                regConn.sendMessage(msg.getBytes().clone());
+            } catch (java.io.IOException e) {
+                System.out.println(e);
+            }
+            resetCounters();
         }
-        resetCounters();
     }
 
 
@@ -292,13 +297,15 @@ public class MessagingNode implements Node{
                                 System.out.println("Messages Relayed: "+node.getMessagesRelayed());
                                 System.out.println("Messages Sent Sum: "+node.getSumOfSent());
                                 System.out.println("Messages Received Sum: "+node.getSumOfReceived());
+                                System.out.println();
                             }
                             break;
                         default:
                             System.out.println(
                                     new String("Error: Commands are <print-counters-and-diagnostis> or <exit-overlay>."));
-                        inputString = scanner.next();
+
                     }
+                    inputString = scanner.next();
                 }
                 if(node.getRegistryUp())
                     node.deregister();

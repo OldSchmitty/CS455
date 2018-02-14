@@ -5,7 +5,7 @@ import java.util.TreeMap;
 
 public class StatisticsCollectorAndDisplay {
 
-    String[] Statistics = {"Packets Sent", "Packets Recieved", "Packets Relayed", "Sum Values Sent", "Sum Values Received"};
+    String[] Statistics = {"Key","Packets Sent", "Packets Recieved", "Packets Relayed", "Sum Values Sent", "Sum Values Received"};
     TreeMap<Integer,GroupStats> map = new TreeMap<Integer, GroupStats>();
     private int total = 0;
 
@@ -22,6 +22,7 @@ public class StatisticsCollectorAndDisplay {
 
     public void reset(){
         map = new TreeMap<Integer, GroupStats>();
+        total = 0;
     }
 
     public int getTotal(){
@@ -35,7 +36,7 @@ public class StatisticsCollectorAndDisplay {
     public void printStats(){
         String line;
         for ( int i =0; i < Statistics.length; i++){
-            System.out.printf(String.format("%15d",Statistics[i]));
+            System.out.printf(String.format("%25s",Statistics[i]));
         }
         int sentTotal = 0;
         int receivedTotal = 0;
@@ -54,13 +55,13 @@ public class StatisticsCollectorAndDisplay {
             sumSumOfSent += stats.sumOfSent;
             sumSumofReceived += stats.sumOfRecieved;
 
-            System.out.printf(String.format("%15d", key)+String.format("%15d", stats.messagesSent)+String.format("%15d", stats.messagesReceived)
-                    +String.format("%15d",stats.messagesRelayed)+String.format("%15d", stats.sumOfSent)+String.format("%15d", stats.sumOfRecieved));
+            System.out.println(String.format("%25d", key)+String.format("%25d", stats.messagesSent)+String.format("%25d", stats.messagesReceived)
+                    +String.format("%25d",stats.messagesRelayed)+String.format("%25d", stats.sumOfSent)+String.format("%25d", stats.sumOfRecieved));
 
         }
         System.out.println();
-        System.out.println(String.format("%15d", "Total")+String.format("%15d",sentTotal)+String.format("%15d", receivedTotal)+String.format("%15d",relayedTotal)+
-                String.format("%15d",sumSumOfSent)+String.format("%15d",sumSumofReceived));
+        System.out.println(String.format("%25s", "Total")+String.format("%25d",sentTotal)+String.format("%25d", receivedTotal)+String.format("%25d",relayedTotal)+
+                String.format("%25d",sumSumOfSent)+String.format("%25d",sumSumofReceived));
         System.out.println();
     }
 
