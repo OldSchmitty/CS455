@@ -159,6 +159,12 @@ public class Registry implements Node{
                             stats.addItem(summaryMsg.getNodeID(), summaryMsg.getPacketsSent(),
                                     summaryMsg.getNumberOfPacketsReceived(), summaryMsg.getPacketsRelayed(),
                                     summaryMsg.getSumOfPacketData(), summaryMsg.getSumOfPacketsReceived());
+                            stats.IncrementTotal();
+                            if (stats.getTotal() == server.table.getNodeNum()){
+                                stats.printStats();
+                                stats.reset();
+                            }
+
                         }
                     }catch(java.io.IOException e){
                         System.out.println(e);

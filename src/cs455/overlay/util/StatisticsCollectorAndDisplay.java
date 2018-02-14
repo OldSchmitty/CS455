@@ -7,6 +7,7 @@ public class StatisticsCollectorAndDisplay {
 
     String[] Statistics = {"Packets Sent", "Packets Recieved", "Packets Relayed", "Sum Values Sent", "Sum Values Received"};
     TreeMap<Integer,GroupStats> map = new TreeMap<Integer, GroupStats>();
+    private int total = 0;
 
     public StatisticsCollectorAndDisplay(){}
     public void addItem(int id, int messagesSent, int messagesReceived, int messagesRelayed, long sumOfSent, long sumOfRecieved){
@@ -21,6 +22,14 @@ public class StatisticsCollectorAndDisplay {
 
     public void reset(){
         map = new TreeMap<Integer, GroupStats>();
+    }
+
+    public int getTotal(){
+        return total;
+    }
+
+    public void IncrementTotal() {
+        total++;
     }
 
     public void printStats(){
