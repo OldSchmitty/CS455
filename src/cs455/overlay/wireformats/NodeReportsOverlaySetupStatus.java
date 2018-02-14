@@ -38,7 +38,7 @@ public class NodeReportsOverlaySetupStatus implements Event{
     public NodeReportsOverlaySetupStatus(int successStatus, String error){
         this.successStatus = successStatus;
         if (successStatus != -1){
-            informationString = "Overlay Setup was a Success for node "+successStatus+".";
+            informationString = new String("Overlay Setup was a Success for node "+successStatus+".");
         }
         else{
             informationString = error;

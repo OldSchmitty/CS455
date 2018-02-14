@@ -29,7 +29,7 @@ public class TCPServerThread extends Thread{
     }
 
     public synchronized byte[] getAddr(){
-        return this.serverSocket.getInetAddress().getAddress();
+        return this.serverSocket.getInetAddress().getAddress().clone();
     }
 
     public void addRoute(int id, InetAddress address, int port, int hops) throws java.io.IOException{
@@ -52,8 +52,8 @@ public class TCPServerThread extends Thread{
         return serverSocket.getLocalPort();
     }
 
-    public void registryExit(Event msg){
-        cache.sendAll(msg);
+    public void registryExit(byte[] bytes){
+        cache.sendAll(bytes);
     }
 
     public void run(){

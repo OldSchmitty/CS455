@@ -43,9 +43,9 @@ public class RegistryReportsRegistrationStatus implements Event{
         this.msgType = Protocol.REGISTRY_REPORTS_REGISTRATION_STATUS;
         this.sucessStatus=sucessStatus;
         if (sucessStatus != -1){
-            this.informationString = "Registration request successful. The number of " +
+            this.informationString = new String("Registration request successful. The number of " +
                     "messaging nodes currently constituting the overlay" +
-                    " is ("+overlayNum+")";
+                    " is ("+overlayNum+")");
         }
         else{
             this.informationString = errorInfo;

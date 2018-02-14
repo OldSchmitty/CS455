@@ -2,6 +2,7 @@ package cs455.overlay.node;
 import cs455.overlay.transport.TCPConnection;
 import cs455.overlay.transport.TCPConnectionsCache;
 import cs455.overlay.transport.TCPServerThread;
+import cs455.overlay.util.StatisticsCollectorAndDisplay;
 import cs455.overlay.wireformats.*;
 
 import java.net.InetAddress;
@@ -22,6 +23,7 @@ public class Registry implements Node{
     private static final int MAX_NODES_REGISTERED = 128;
     private ArrayList<RegistrySendsNodeManifest> msgs;
     private int overlaySuccessCount;
+    private StatisticsCollectorAndDisplay stats = new StatisticsCollectorAndDisplay();
 
     public Registry(int portNum){
         this.portNum = portNum;
@@ -38,15 +40,18 @@ public class Registry implements Node{
     public void setupOverlay(int nR) {
         if(server.table.getNodeNum() > 2*nR){
             msgs = server.table.getRouteMsgs(nR);
-            listRoutingTables();
             if(msgs != null) {
                 for (RegistrySendsNodeManifest msg : msgs) {
-                    server.table.sendMsg(msg, msg.getDestinationID());
+                    try {
+                        server.table.sendMsg(msg.getBytes().clone(), msg.getDestinationID());
+                    }catch(java.io.IOException e){
+                        System.out.println(e);
+                    }
                 }
             }
         }
         else{
-            System.out.println("There are not enough nodes in the overlay to satisfy nodes > 2*nR");
+            System.out.println(new String("There are not enough nodes in the overlay to satisfy nodes > 2*nR"));
         }
     }
 
@@ -72,7 +77,7 @@ public class Registry implements Node{
         String error = "";
         int id = getRandomId();
         if (id == -1) {
-            error = "Error: Can not add node. 128 Nodes already exist.";
+            error = new String("Error: Can not add node. 128 Nodes already exist.");
         }
         try{
             InetAddress addr = InetAddress.getByAddress(msg.getIPAddress());
@@ -82,16 +87,25 @@ public class Registry implements Node{
                 server.addRoute(id, 1,msgNodeCon, msg.getPortNum());
             }
             else{
-                error = "Error: IP address in Registration message does not match socket address";
+                error = new String("Error: IP address in Registration message does not match socket address");
                 id = -1;
             }
             RegistryReportsRegistrationStatus reportMsg = new RegistryReportsRegistrationStatus(
                     id,server.table.getNodeNum(),error);
             if (id != -1) {
-                server.table.sendMsg(reportMsg, id);
+                try {
+                    server.table.sendMsg(reportMsg.getBytes(), id);
+                }catch (java.io.IOException e){
+                    System.out.println(e);
+                }
             }
             else{
-                msgNodeCon.sendMessage(reportMsg);
+                try {
+                    msgNodeCon.sendMessage(reportMsg.getBytes());
+                }catch (java.io.IOException e){
+                    System.out.println(e);
+                }
+
             }
 
         }catch(java.io.IOException e){
@@ -114,22 +128,22 @@ public class Registry implements Node{
         try {
             switch (type) {
                 case Protocol.OVERLAY_NODE_SENDS_REGISTRATION:
-                    OverlayNodeSendsRegistration regmsg = new OverlayNodeSendsRegistration(event.getBytes());
+                    OverlayNodeSendsRegistration regmsg = new OverlayNodeSendsRegistration(event.getBytes().clone());
                     registerNode(regmsg, socket);
                     break;
                 case Protocol.OVERLAY_NODE_SENDS_DEREGISTRATION:
-                    OverlayNodeSendsDeregistration deregmsg = new OverlayNodeSendsDeregistration(event.getBytes());
+                    OverlayNodeSendsDeregistration deregmsg = new OverlayNodeSendsDeregistration(event.getBytes().clone());
                     deregisterNode(deregmsg);
                     break;
                 case Protocol.OVERLAY_NODE_REPORTS_TASK_FINISHED:
                     synchronized (this) {
                         increaseOverlayCounter();
-                        OverlayNodeReportsTaskFinished finishMsg = new OverlayNodeReportsTaskFinished(event.getBytes());
-                        System.out.println("Node " + finishMsg.getNodeID() + " has reported task as finished");
+                        OverlayNodeReportsTaskFinished finishMsg = new OverlayNodeReportsTaskFinished(event.getBytes().clone());
+                        System.out.println(new String("Node ") + finishMsg.getNodeID() + new String(" has reported task as finished"));
                         if (checkCounter() == server.table.getNodeNum()) {
                             try {
                                 Thread.sleep(15000);
-                                System.out.println("Registry Requesting Summary information");
+                                System.out.println(new String("Registry Requesting Summary information"));
                                 requestSummary();
                             } catch (java.lang.InterruptedException e) {
                                 System.out.println(e);
@@ -140,25 +154,29 @@ public class Registry implements Node{
                 case Protocol.OVERLAY_NODE_REPORTS_TRAFFIC_SUMMARY:
                     try{
                         OverlayNodeReportsTrafficSummary summaryMsg = new
-                                OverlayNodeReportsTrafficSummary(event.getBytes());
-                        System.out.println("Got summary from Node" + summaryMsg.getNodeID());
+                                OverlayNodeReportsTrafficSummary(event.getBytes().clone());
+                        synchronized (this){
+                            stats.addItem(summaryMsg.getNodeID(), summaryMsg.getPacketsSent(),
+                                    summaryMsg.getNumberOfPacketsReceived(), summaryMsg.getPacketsRelayed(),
+                                    summaryMsg.getSumOfPacketData(), summaryMsg.getSumOfPacketsReceived());
+                        }
                     }catch(java.io.IOException e){
                         System.out.println(e);
                     }
 
                     break;
                 case Protocol.NODE_REPORTS_OVERLAY_SETUP_STATUS:
-                    NodeReportsOverlaySetupStatus statusMsg = new NodeReportsOverlaySetupStatus(event.getBytes());
+                    NodeReportsOverlaySetupStatus statusMsg = new NodeReportsOverlaySetupStatus(event.getBytes().clone());
                     System.out.println(statusMsg.getInformationString());
                     if (statusMsg.getSuccessStatus() == -1){
-                        System.out.println("A node failed to setup the overlay: ");
-                        System.out.println("Please exit registry and all nodes and try again.");
+                        System.out.println(new String("A node failed to setup the overlay: "));
+                        System.out.println(new String("Please exit registry and all nodes and try again."));
                     }
                     else {
                         increaseOverlayCounter();
                     }
                     if(checkCounter() == server.table.getNodeNum()){
-                        System.out.println("All nodes in registry have successfully set up the overlay.");
+                        System.out.println(new String("All nodes in registry have successfully set up the overlay."));
                         resetCounter();
                     }
                     break;
@@ -170,16 +188,21 @@ public class Registry implements Node{
 
     private void requestSummary(){
         RegistryRequestsTrafficSummary msg = new RegistryRequestsTrafficSummary();
-        server.table.sendAll(msg);
+        try {
+            server.table.sendAll(msg.getBytes().clone());
+        }catch (java.io.IOException e){
+            System.out.println(e);
+        }
+
     }
 
     public void listRoutingTables(){
         try {
             for (RegistrySendsNodeManifest msg : msgs) {
-                System.out.println("Routing table for Node: " + msg.getDestinationID());
+                System.out.println(new String("Routing table for Node: ") + msg.getDestinationID());
                 for (int i = 0; i < msg.getRoutingTableSize(); i++) {
-                    System.out.println("Entry " + (i + 1) + ":  IP = " + InetAddress.getByAddress(msg.getIP(i)) +
-                            "        port = " + msg.getPort(i) + "         id = " + msg.getNodeID(i));
+                    System.out.println(new String("Entry " + (i + 1) + ":  IP = " + InetAddress.getByAddress(msg.getIP(i)) +
+                            "        port = " + msg.getPort(i) + "         id = " + msg.getNodeID(i)));
                 }
                 System.out.println();
                 System.out.println();
@@ -192,11 +215,11 @@ public class Registry implements Node{
 
     public void deregisterNode(OverlayNodeSendsDeregistration msg){
         int id = msg.getNodeID();
-        String error = "";
+        String error = new String("");
         RegistryReportsDeregistrationStatus deregmsg;
         int successStatus = -1;
         if (!server.table.hasEntry(id)){
-            error = "Error: Node "+msg.getNodeID()+" is not in the registry.";
+            error =  new String("Error: Node "+msg.getNodeID()+" is not in the registry.");
             successStatus = -1;
         }
         else{
@@ -208,14 +231,18 @@ public class Registry implements Node{
                     successStatus = id;
                 } else {
                     successStatus = -1;
-                    error = "Error: Node IP Address in msg does not match Socket Address.";
+                    error = new String("Error: Node IP Address in msg does not match Socket Address.");
                 }
             }catch(java.io.IOException e){
                 System.out.println(e);
             }
         }
         deregmsg = new RegistryReportsDeregistrationStatus(successStatus, error);
-        server.table.sendMsg(deregmsg,id);
+        try {
+            server.table.sendMsg(deregmsg.getBytes().clone(),id);
+        }catch (java.io.IOException e){
+            System.out.println(e);
+        }
         if (successStatus != -1) {
             server.table.removeEntry(id);
         }
@@ -227,7 +254,16 @@ public class Registry implements Node{
 
     public void taskStart(int num){
         RegistryRequestsTaskInitiate msg = new RegistryRequestsTaskInitiate(num);
-        server.table.sendAll(msg);
+        try {
+            server.table.sendAll(msg.getBytes().clone());
+        }catch (java.io.IOException e){
+            System.out.println(e);
+        }
+
+    }
+
+    public void listMessagingNodes(){
+        server.table.printTable();
     }
 
 
@@ -243,14 +279,14 @@ public class Registry implements Node{
                 while (!(inputString.equals("exit"))){
                     switch (inputString){
                         case "list-messaging-nodes":
-                            System.out.println("TO-DO : list-messaging-Nodes");
+                            registry.listMessagingNodes();
                             break;
 
                         case "setup-overlay":
                             inputString = scanner.next();
                             int nR = Integer.parseInt(inputString);
                             if (nR<1){
-                                System.out.println("Error: nR must be greater than 0.");
+                                System.out.println(new String("Error: nR must be greater than 0."));
                             }
                             else{
                                 registry.setupOverlay(nR);
@@ -265,12 +301,11 @@ public class Registry implements Node{
                             inputString = scanner.next();
                             int numOfPackets = Integer.parseInt(inputString);
                             registry.taskStart(numOfPackets);
-
                             break;
 
                         default:
                             System.out.println(
-                                    "Error: Commands are <print-counters-and-diagnostis> or <exit-overlay>.");
+                                    new String("Error: invalid command, try again"));
                     }
                     inputString = scanner.next();
                 }
@@ -281,8 +316,8 @@ public class Registry implements Node{
             }
         }
         else{
-            System.out.println("Error: Incorrect number of arguments "+args.length+
-                    " you must specify a port-num.");
+            System.out.println((new String("Error: Incorrect number of arguments "+args.length+
+                    " you must specify a port-num.")));
         }
 
     }

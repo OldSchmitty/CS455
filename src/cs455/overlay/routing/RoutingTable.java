@@ -49,9 +49,9 @@ public class RoutingTable {
         }
     }
 
-    public synchronized boolean sendMsg(Event event, int id){
+    public synchronized boolean sendMsg(byte[] bytes, int id){
         if (table.get(id) != null) {
-            table.get(id).sendMsg(event);
+            table.get(id).sendMsg(bytes.clone());
             return true;
         }
 
@@ -87,13 +87,7 @@ public class RoutingTable {
                 }
                 itr++;
             }
-            try{
-                OverlayNodeSendsData msg = new OverlayNodeSendsData(event.getBytes());
-                System.out.println("Node : "+nodeID+" is relaying a packet for "+msg.getDestinationID()+ " to " + currentRoute.getID());
-            }catch (java.io.IOException e){
-                System.out.println(e);
-            }
-            currentRoute.sendMsg(event);
+            currentRoute.sendMsg(bytes.clone());
         }
         return false;
     }
@@ -118,9 +112,9 @@ public class RoutingTable {
         return table.get(id).getSocket();
     }
 
-    public synchronized void sendAll(Event msg){
+    public synchronized void sendAll(byte[] bytes){
         for(RoutingEntry entry : table.values()){
-            entry.sendMsg(msg);
+            entry.sendMsg(bytes.clone());
         }
     }
 
@@ -161,7 +155,7 @@ public class RoutingTable {
                     routeList.add(table.get(key));
                 } else {
                     System.out.println(
-                            "A routing table of " + nR + " size results in a node including itself in its routing table.");
+                            new String("A routing table of " + nR + " size results in a node including itself in its routing table."));
                     return null;
                 }
                 count++;
@@ -175,6 +169,7 @@ public class RoutingTable {
 
     public long startTask(int num, int[] nodeIDs, int nodeNum){
         long sumOfSent = 0;
+        byte[] bytes;
         for (int i = 0; i < num; i++){
             int payload = random.nextInt();
             int destination = nodeIDs[random.nextInt(nodeIDs.length)];
@@ -182,10 +177,24 @@ public class RoutingTable {
                 destination = nodeIDs[random.nextInt(nodeIDs.length)];
             }
             OverlayNodeSendsData msg = new OverlayNodeSendsData(destination,nodeNum,payload);
-            sendMsg(msg, destination);
-            sumOfSent += payload;
+            try {
+                 bytes= msg.getBytes().clone();
+                sendMsg(bytes, destination);
+                sumOfSent += payload;
+            }catch (java.io.IOException e){
+                System.out.println(e);
+            }
         }
+        System.gc();
         return sumOfSent;
+    }
+
+    public void printTable(){
+        for(int key : table.keySet()){
+            RoutingEntry r = table.get(key);
+            System.out.println("Address: "+r.getSocket().getInetAddress().getAddress()
+                    +"     Port: "+r.getPort()+"     ID: "+r.getID());
+        }
     }
 
 }

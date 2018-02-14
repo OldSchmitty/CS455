@@ -43,11 +43,7 @@ public class TCPConnection {
         }
     }
 
-    public void sendMessage(Event event){
-        try {
-            sender.addToQueue(event.getBytes());
-        }catch(java.io.IOException e){
-            System.out.println(e);
-        }
+    public void sendMessage(byte[] bytes){
+            sender.addToQueue(bytes);
     }
 }

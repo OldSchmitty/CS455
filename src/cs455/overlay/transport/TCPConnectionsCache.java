@@ -35,7 +35,7 @@ public class TCPConnectionsCache {
                 return conn;
             }
         }
-        System.out.println("Failed to find a socket connection, reference was lost.");
+        System.out.println(new String("Failed to find a socket connection, reference was lost."));
         return null;
     }
 
@@ -44,9 +44,9 @@ public class TCPConnectionsCache {
         connections.add(conn);
         return connections.size()-1;
     }
-    public synchronized void sendAll(Event msg){
+    public synchronized void sendAll(byte[] bytes){
         for (TCPConnection conn : connections){
-            conn.sendMessage(msg);
+            conn.sendMessage(bytes);
         }
     }
 }

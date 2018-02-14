@@ -41,7 +41,7 @@ public class RegistryReportsDeregistrationStatus implements Event{
         this.msgType = Protocol.REGISTRY_REPORTS_DEREGISTRATION_STATUS;
         this.sucessStatus=sucessStatus;
         if (sucessStatus != -1){
-            this.informationString = "Deregistration request successful.";
+            this.informationString = new String("Deregistration request successful.");
         }
         else{
             this.informationString = errorInfo;

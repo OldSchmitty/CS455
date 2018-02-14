@@ -30,8 +30,8 @@ public class RoutingEntry {
     }
 
 
-    public void sendMsg(Event event){
-        conn.sendMessage(event);
+    public void sendMsg(byte[] bytes){
+        conn.sendMessage(bytes);
     }
 
     public Socket getSocket(){
