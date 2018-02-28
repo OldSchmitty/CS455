@@ -1,4 +1,4 @@
-package cs455.scaling.cs455.scaling.server;
+package cs455.scaling.server;
 import java.util.LinkedList;
 
 public class ThreadPoolManager {

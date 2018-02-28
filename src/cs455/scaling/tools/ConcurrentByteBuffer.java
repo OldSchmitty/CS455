@@ -1,4 +1,4 @@
-package cs455.scaling.cs455.scaling.server;
+package cs455.scaling.tools;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
@@ -35,8 +35,6 @@ public class ConcurrentByteBuffer {
     }
 
 
-
-
     //Writes to buffer
     synchronized public void write(byte b)
     {
@@ -62,4 +60,6 @@ public class ConcurrentByteBuffer {
     public synchronized ByteBuffer getBuffer(){
         return byteBuffer;
     }
+
+
 }
