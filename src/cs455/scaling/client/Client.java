@@ -11,7 +11,6 @@ import java.nio.channels.SocketChannel;
 import java.security.MessageDigest;
 import java.util.LinkedList;
 import java.util.Random;
-import cs455.scaling.tools.ConcurrentByteBuffer;
 
 public class Client {
     private static final int msgSize = 8000;
@@ -20,6 +19,7 @@ public class Client {
     private InetAddress hostAddress;
     private int port;
     private int messageRate;
+    private ClientReceiverThread receiver;
 
     public Client(String hostAddress, int port, int messageRate){
         try {
@@ -30,6 +30,7 @@ public class Client {
         }
         try{
             selector = Selector.open();
+            receiver = new ClientReceiverThread(selector,hashList);
         }catch (java.io.IOException e){
             System.out.println(e);
             System.exit(1);
@@ -85,8 +86,9 @@ public class Client {
         SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.hostAddress, this.port));
         channel.configureBlocking(false);
         SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
-        key.interestOps(SelectionKey.OP_WRITE);
+        key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
         boolean test = true;
+        receiver.start();
         while(true) {
             for (int i = 0; i < 5 && test; i++) {
                 if (channel.isConnected()) {
