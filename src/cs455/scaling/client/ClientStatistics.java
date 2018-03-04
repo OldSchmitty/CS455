@@ -1,4 +1,6 @@
 package cs455.scaling.client;
 
-public class ClientStatistics {
+public class ClientStatistics extends Thread{
+
+
 }

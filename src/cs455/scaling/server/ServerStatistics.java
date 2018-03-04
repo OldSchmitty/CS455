@@ -9,7 +9,7 @@ public class ServerStatistics {
     public int[] getStats(){
         int i = 0;
         int[] statsArray;
-        synchronized (map){
+        synchronized (this){
             statsArray = new int[map.size()];
             for (int value : map.values()){
                 statsArray[i] = value;
@@ -20,13 +20,13 @@ public class ServerStatistics {
     }
 
     public void addConnection(SocketChannel channel){
-        synchronized (map) {
+        synchronized (this) {
             map.put(channel, 0);
         }
     }
 
     public void increaseMsgSent(SocketChannel channel){
-        synchronized (map){
+        synchronized (this){
             map.put(channel, map.get(channel)+1);
         }
     }

@@ -16,16 +16,19 @@ public class ConcurrentTaskList {
     }
 
     public synchronized Task getTask(){
-        while (taskList.size() <= 0 && running) {
+        while (taskList.size() <= 0) {
             try {
                 wait();
             }catch (java.lang.InterruptedException e){
                 System.out.println(e);
             }
-            if (taskList.size() <= 0 && running){
+            if(!running){
+                return null;
+            }
+            if (taskList.size() > 0){
                 return taskList.removeFirst();
             }
         }
-        return null;
+        return taskList.removeFirst();
     }
 }

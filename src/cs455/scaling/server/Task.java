@@ -29,8 +29,8 @@ public class Task {
             while (buffer.hasRemaining() && read != -1) {
                 read = channel.read(buffer);
             }
-            data = new byte[bufferSize];
-            buffer.put(data);
+            data = buffer.array();
+            byte b1 = data[2001];
 
         } catch (IOException e) {
             // Cancel the key and close the socket channel
@@ -62,11 +62,11 @@ public class Task {
 
     }
 
-    private void write(SelectionKey key, byte[] data) throws IOException {
+    private void write(byte[] data) throws IOException {
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(data.length);
-        buffer.put(data);
-        channel.write(buffer);
+        buffer = buffer.wrap(data);
+        System.out.println("Wrote "+channel.write(buffer)+" bytes to "+channel.getRemoteAddress());
         key.interestOps(SelectionKey.OP_READ);
     }
 
@@ -78,16 +78,13 @@ public class Task {
         }
         if (data.length > 0) {
             hash = SHA1FromBytes(data);
+            System.out.println("Got hash "+hash);
             try {
-                write(key, hash.getBytes());
+                write(hash.getBytes());
             }catch (java.io.IOException e){
                 System.out.println(e);
             }
         }
-        else{
-            System.out.println("length of data is 0, something went wrong.");
-        }
-
 
     }
 

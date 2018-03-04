@@ -9,6 +9,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.security.MessageDigest;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -30,7 +31,6 @@ public class Client {
         }
         try{
             selector = Selector.open();
-            receiver = new ClientReceiverThread(selector,hashList);
         }catch (java.io.IOException e){
             System.out.println(e);
             System.exit(1);
@@ -74,9 +74,10 @@ public class Client {
         byte[] randomBytes = makeRandomBytes();
         String SHA1 = SHA1FromBytes(randomBytes);
         addHash(SHA1);
+        System.out.println("Sending Hash: "+SHA1);
         ByteBuffer buffer = ByteBuffer.wrap(randomBytes);
         try {
-            System.out.print(channel.write(buffer));
+            channel.write(buffer);
         }catch(java.io.IOException e){
             System.out.println(e);
         }
@@ -85,26 +86,21 @@ public class Client {
     private void startClient() throws IOException {
         SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.hostAddress, this.port));
         channel.configureBlocking(false);
-        SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
-        key.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
-        boolean test = true;
+        channel.register(selector, SelectionKey.OP_READ);
+        receiver = new ClientReceiverThread(selector,hashList);
         receiver.start();
+        boolean test = true;
         while(true) {
-            for (int i = 0; i < 5 && test; i++) {
-                if (channel.isConnected()) {
-                    sendMessage(channel);
-                    System.out.println("sent message");
-                }
-                try {
-                    Thread.sleep(1000);
-                }catch (java.lang.InterruptedException e){
-                    System.out.println(e);
-                }
+            if (channel.isConnected()) {
+                sendMessage(channel);
             }
-            test = false;
+            try {
+                Thread.sleep(1000/messageRate);
+            }catch (java.lang.InterruptedException e){
+                System.out.println(e);
+            }
         }
     }
-
 
     public static void main(String args[]){
         if(args.length == 3) {
