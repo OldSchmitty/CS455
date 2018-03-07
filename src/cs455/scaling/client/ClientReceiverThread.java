@@ -58,7 +58,7 @@ public class ClientReceiverThread extends Thread {
                     channel.close();
                 }
                 else{
-                    System.out.println("Error: hashList does not contain hash "+hash);
+
                 }
             }
         } catch (IOException e) {

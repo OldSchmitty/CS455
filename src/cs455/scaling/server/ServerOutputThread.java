@@ -35,6 +35,7 @@ public class ServerOutputThread extends Thread {
         System.out.println("["+timestamp+"]"+"Server Throughput: "+totalMsgs+"message/s, Active Client Connections: "+
                 statsArray.length+", Mean Per-client Throughput: "+meanMsgs+" message/s, Std. Dev. Of Per-client"
                 +"Throughput: "+stdDev+" message/s");
+        totalMsgs = 0;
     }
 
     public void run(){
