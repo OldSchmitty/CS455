@@ -3,13 +3,11 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.security.MessageDigest;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -21,6 +19,7 @@ public class Client {
     private int port;
     private int messageRate;
     private ClientReceiverThread receiver;
+    private ClientStatisticsThread stats;
 
     public Client(String hostAddress, int port, int messageRate){
         try {
@@ -74,7 +73,6 @@ public class Client {
         byte[] randomBytes = makeRandomBytes();
         String SHA1 = SHA1FromBytes(randomBytes);
         addHash(SHA1);
-        System.out.println("Sending Hash: "+SHA1);
         ByteBuffer buffer = ByteBuffer.wrap(randomBytes);
         try {
             channel.write(buffer);
@@ -87,12 +85,15 @@ public class Client {
         SocketChannel channel = SocketChannel.open(new InetSocketAddress(this.hostAddress, this.port));
         channel.configureBlocking(false);
         channel.register(selector, SelectionKey.OP_READ);
-        receiver = new ClientReceiverThread(selector,hashList);
+        stats = new ClientStatisticsThread();
+        stats.start();
+        receiver = new ClientReceiverThread(selector,hashList, stats);
         receiver.start();
         boolean test = true;
         while(true) {
             if (channel.isConnected()) {
                 sendMessage(channel);
+                stats.incrMessagedSent();
             }
             try {
                 Thread.sleep(1000/messageRate);

@@ -32,7 +32,7 @@ public class Server {
     private void startServer() throws IOException {
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.configureBlocking(false);
-        serverSocketChannel.socket().bind(new InetSocketAddress("localhost", portNum));
+        serverSocketChannel.socket().bind(new InetSocketAddress(portNum));
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
         manager.startThreads();
         while (true) {

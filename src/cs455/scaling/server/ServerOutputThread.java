@@ -1,4 +1,6 @@
 package cs455.scaling.server;
+import java.sql.Time;
+import java.sql.Timestamp;
 
 public class ServerOutputThread extends Thread {
     private ServerStatistics stats;
@@ -10,7 +12,7 @@ public class ServerOutputThread extends Thread {
     public void printStats(){
         int totalMsgs = 0;
         double meanMsgs;
-        double stdDev;
+        double stdDev = 0;
 
         int[] statsArray = stats.getStats();
         for (int i = 0; i<statsArray.length; i ++){
@@ -22,9 +24,17 @@ public class ServerOutputThread extends Thread {
         else{
             meanMsgs = 0;
         }
-        System.out.println("Total: "+totalMsgs+" Mean: "+meanMsgs);
+        for (int i = 0; i < statsArray.length; i++)
+        {
+            stdDev += Math.pow((statsArray[i] - meanMsgs),2);
+        }
+        stdDev = stdDev/(statsArray.length-1);
+        stdDev = Math.sqrt(stdDev);
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
 
-
+        System.out.println("["+timestamp+"]"+"Server Throughput: "+totalMsgs+"message/s, Active Client Connections: "+
+                statsArray.length+", Mean Per-client Throughput: "+meanMsgs+" message/s, Std. Dev. Of Per-client"
+                +"Throughput: "+stdDev+" message/s");
     }
 
     public void run(){

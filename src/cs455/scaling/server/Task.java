@@ -66,7 +66,7 @@ public class Task {
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(data.length);
         buffer = buffer.wrap(data);
-        System.out.println("Wrote "+channel.write(buffer)+" bytes to "+channel.getRemoteAddress());
+        channel.write(buffer);
         key.interestOps(SelectionKey.OP_READ);
     }
 
@@ -78,7 +78,6 @@ public class Task {
         }
         if (data.length > 0) {
             hash = SHA1FromBytes(data);
-            System.out.println("Got hash "+hash);
             try {
                 write(hash.getBytes());
             }catch (java.io.IOException e){

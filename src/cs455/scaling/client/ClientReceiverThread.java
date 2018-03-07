@@ -12,11 +12,13 @@ import java.util.LinkedList;
 public class ClientReceiverThread extends Thread {
     private Selector selector;
     private LinkedList<String> hashList;
+    private ClientStatisticsThread stats;
 
 
-    public ClientReceiverThread(Selector selector, LinkedList<String> hashList){
+    public ClientReceiverThread(Selector selector, LinkedList<String> hashList, ClientStatisticsThread stats){
         this.selector = selector;
         this.hashList = hashList;
+        this.stats = stats;
     }
 
     public void run(){
@@ -45,11 +47,10 @@ public class ClientReceiverThread extends Thread {
         try {
             read = channel.read(buffer);
             String hash = new String(buffer.array()).trim();
-            System.out.println("Received hash: "+hash);
             synchronized (hashList){
                 if (hashList.contains(hash)){
                     hashList.remove(hash);
-                    System.out.println("AKK");
+                    stats.incrMessagedsReceived();
                 }
                 else if (read == -1) {
                     /* Connection was terminated by the client. */

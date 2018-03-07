@@ -11,10 +11,12 @@ public class ServerStatistics {
         int[] statsArray;
         synchronized (this){
             statsArray = new int[map.size()];
-            for (int value : map.values()){
-                statsArray[i] = value;
+            for (SocketChannel chan : map.keySet()){
+                statsArray[i] = map.get(chan);
+                map.put(chan, 0);
                 i++;
             }
+
             return statsArray;
         }
     }
