@@ -1,2 +1,2 @@
-# CS455
-Private repo for my homework assignments
+# CS455 Distributed Systems
+Repo for homework assignments.
